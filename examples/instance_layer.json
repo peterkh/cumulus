@@ -1,0 +1,142 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Cut down version of AWS CloudFormation Sample Template vpc_single_instance_in_subnet.template, which creates instances inside an existing VPC",
+  "Parameters": {
+    "SSHLocation": {
+      "Description": " The IP address source range allowed SSH access to defined EC2 instances",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "0.0.0.0/0",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+    },
+    "InstanceType": {
+      "Description": "WebServer EC2 instance type",
+      "Type": "String",
+      "Default": "m1.small",
+      "AllowedValues": [
+        "t1.micro",
+        "m1.small",
+        "m1.medium",
+        "m1.large",
+        "m1.xlarge",
+        "m2.xlarge",
+        "m2.2xlarge",
+        "m2.4xlarge",
+        "m3.xlarge",
+        "m3.2xlarge",
+        "c1.medium",
+        "c1.xlarge",
+        "cc1.4xlarge",
+        "cc2.8xlarge",
+        "cg1.4xlarge"
+      ],
+      "ConstraintDescription": "must be a valid EC2 instance type."
+    },
+    "KeyName": {
+      "Description": "Name of an existing EC2 KeyPair to allow SSH access to defined instances",
+      "Type": "String"
+    },
+    "VPC": {
+      "Description": "VpcId of the VPC to launch this instance in",
+      "Type": "String"
+    },
+    "Subnet": {
+      "Description": "Subnet within the VPC to launch the instance",
+      "Type": "String"
+    }
+  },
+  "Mappings": {
+    "RegionMap": {
+      "us-east-1": {
+        "AMI": "ami-7f418316"
+      },
+      "us-west-1": {
+        "AMI": "ami-951945d0"
+      },
+      "us-west-2": {
+        "AMI": "ami-16fd7026"
+      },
+      "eu-west-1": {
+        "AMI": "ami-24506250"
+      },
+      "sa-east-1": {
+        "AMI": "ami-3e3be423"
+      },
+      "ap-southeast-1": {
+        "AMI": "ami-74dda626"
+      },
+      "ap-southeast-2": {
+        "AMI": "ami-b3990e89"
+      },
+      "ap-northeast-1": {
+        "AMI": "ami-dcfa4edd"
+      }
+    }
+  },
+  "Resources": {
+    "IPAddress": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc",
+        "InstanceId": {
+          "Ref": "WebServerInstance"
+        }
+      }
+    },
+    "InstanceSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "GroupDescription": "Enable SSH access via port 22",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": {
+              "Ref": "SSHLocation"
+            }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "80",
+            "ToPort": "80",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    },
+    "WebServerInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId": {
+          "Fn::FindInMap": [
+            "RegionMap",
+            {
+              "Ref": "AWS::Region"
+            },
+            "AMI"
+          ]
+        },
+        "SecurityGroupIds": [
+          {
+            "Ref": "InstanceSecurityGroup"
+          }
+        ],
+        "SubnetId": {
+          "Ref": "Subnet"
+        },
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        }
+      }
+    }
+  }
+}
