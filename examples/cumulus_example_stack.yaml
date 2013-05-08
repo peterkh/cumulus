@@ -2,8 +2,6 @@
 
 #Overall stack name. All stacks in CF get prefixed with this name.
 example-stack:
-    #The region cumulus will create the stack in 
-    region: us-west-1
     # Optional SNS ARN to receive notification about the sub-stacks
 #   sns-topic-arn: arn:aws:sns:region:account:topic
     # Same as above but with multiple topics
