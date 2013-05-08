@@ -36,7 +36,7 @@ How to get started
 
 Clone the repo somewhere:
 
-[insert clone repo command]
+        $ git clone git://github.com/cotdsa/cumulus.git
 
 Install Cumulus with setuptools:
 
