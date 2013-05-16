@@ -276,7 +276,7 @@ class MegaStack:
         #print the last 5 events, so we get to see the start of the action we are performing
         self.logger.info("Last 5 events for this stack:")
         for e in reversed(events[:5]):
-            self.logger.info("%s %s %s %s %s" % (e.timestamp.isoformat(), e.resource_status, e.resource_type, e.logical_resource_id, e.resource_status_reason))
+            self.logger.info("%s %s %s %s %s %s" % (e.timestamp.isoformat(), e.resource_status, e.resource_type, e.logical_resource_id, e.physical_resource_id, e.resource_status_reason))
         status = str(cfstack_obj.stack_status)
         self.logger.info("New events:")
         while status in while_status:
