@@ -291,7 +291,7 @@ class MegaStack:
                 events_to_log.insert(0, new_events[x])
                 x += 1
             for event in events_to_log:
-                self.logger.info("%s %s %s %s %s" % (event.timestamp.isoformat(), event.resource_status, event.resource_type, event.logical_resource_id, event.physical_resource_id, event.resource_status_reason))
+                self.logger.info("%s %s %s %s %s %s" % (event.timestamp.isoformat(), event.resource_status, event.resource_type, event.logical_resource_id, event.physical_resource_id, event.resource_status_reason))
             if x > 0:
                 events = new_events[:]
             cfstack_obj.update()
