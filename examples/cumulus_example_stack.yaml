@@ -9,7 +9,7 @@ example-stack:
 #       - arn:aws:sns:region:account:topic1
 #       - arn:aws:sns:region:account:topic2
     #The region Cumulus will create the stack in 
-    region: ap-southeast-2
+    region: us-west-2
     stacks:
         #Base stack, has the same name as the top level. Cumulus knows not to call it examplestack-example-stack.
         #This template has no parameters to pass in
