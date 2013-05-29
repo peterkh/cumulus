@@ -163,10 +163,10 @@ class CFStack:
     def read_template(self):
         try:
             template_file = open(self.template_name, 'r')
+            template = simplejson.load(template_file)
         except Exception as e:
             print "Cannot open template file for stack %s, error: %s" % (self.name, e)
             exit(1)
-        template = simplejson.load(template_file)
         self.template_body = simplejson.dumps(template)
         return True
 
