@@ -21,10 +21,10 @@ class CFStack:
         else:
             self.depends_on = []
             for dep in depends_on:
-                if dep == mega_stack_name:
-                    self.depends_on.append(dep)
-                else:
-                    self.depends_on.append("%s-%s" % (mega_stack_name, dep))
+                #if dep == mega_stack_name:
+                self.depends_on.append(dep)
+                #else:
+                #    self.depends_on.append("%s-%s" % (mega_stack_name, dep))
         self.region = region
         self.sns_topic_arn = sns_topic_arn
 

@@ -3,8 +3,134 @@ import logging
 import simplejson
 import time
 import yaml
+#from pygraph.classes.graph import graph
+import networkx
+from sys import getrecursionlimit, setrecursionlimit
 from CFStack import CFStack
 from boto import cloudformation
+
+class DependencyError(Exception):
+  pass
+
+class MutualDependencyError(DependencyError):
+  def __init__(self, node1, node2):
+    self.node1 = node1
+    self.node2 = node2
+
+  def __repr__(self):
+    return "Mutual dependency between %s and %s" % (self.node1, self.node2)
+
+
+class DependencyLoopError(DependencyError):
+  def __init__(self, loopnodes):
+    self.loopnodes = loopnodes
+
+  def __repr__(self):
+    return "Dependency loop detected: %s -> %s"  % (" -> ".join(self.loopnodes), self.loopnodes[0])
+
+class StackDependencyGraph:
+  def __init__(self):
+    self.node_deps = {}
+    self.node_successors = {}
+
+  def add_node(self, node):
+    if node not in self.node_deps and node not in self.node_successors:
+      self.node_deps[node] = []
+      self.node_successors[node] = []
+    else:
+      raise IndexError("Node %s already present" % node)
+
+  def nodes(self):
+    return list(self.node_deps.keys())
+
+  def find_cycle(self):
+    graph = self.node_deps
+    def find_cycle_to_ancestor(node, ancestor):
+        """
+        Find a cycle containing both node and ancestor.
+        """
+        path = []
+        while (node != ancestor):
+            if (node is None):
+                return []
+            path.append(node)
+            node = spanning_tree[node]
+        path.append(node)
+        path.reverse()
+        return path
+
+    def dfs(node):
+        """
+        Depth-first search subfunction.
+        """
+        visited[node] = 1
+        # Explore recursively the connected component
+        for each in graph[node]:
+            if (cycle):
+                return
+            if (each not in visited):
+                spanning_tree[each] = node
+                dfs(each)
+            else:
+                if spanning_tree[node] != each:
+                    cycle.extend(find_cycle_to_ancestor(node, each))
+
+    recursionlimit = getrecursionlimit()
+    setrecursionlimit(max(len(self.nodes())*2,recursionlimit))
+
+    visited = {}              # List for marking visited and non-visited nodes
+    spanning_tree = {}        # Spanning tree
+    cycle = []
+
+    # Algorithm outer-loop
+    for each in graph:
+        # Select a non-visited node
+        if (each not in visited):
+            spanning_tree[each] = None
+            # Explore node's connected component
+            dfs(each)
+            if (cycle):
+                setrecursionlimit(recursionlimit)
+                return cycle
+
+    setrecursionlimit(recursionlimit)
+    return []
+
+
+  def add_dependeny(self, parent, children):
+    if parent in self.node_deps and parent in self.node_successors:
+      if children in self.node_deps and children in self.node_successors:
+        if parent not in self.node_deps[children]:
+          self.node_deps[parent].append(children)
+          self.node_successors[children].append(parent)
+        else:
+          raise MutualDependencyError(parent, children)
+      else:
+        raise IndexError("Node %s not present in graph" % children)
+    else:
+      raise IndexError("Node %s not present in graph" % parent)
+
+  def del_node(self, node):
+    if node in self.node_deps and node in self.node_successors:
+      del self.node_deps[node]
+      successors = self.node_successors[node]
+      for successor in successors:
+        self.node_deps[successor].remove(node)
+      del self.node_successors[node]
+    else:
+      raise IndexError("Node %s not present in graph" % node)
+
+
+  def get_edge_nodes(self):
+    edge_nodes = []
+    for node_dep in self.node_deps:
+      print "%s=%s LEN=%d" % (node_dep, self.node_deps[node_dep], len(self.node_deps[node_dep]))
+      if len(self.node_deps[node_dep]) == 0:
+        edge_nodes.append(node_dep)
+    print ""
+    return edge_nodes
+
+
 
 class MegaStack:
     """
@@ -109,7 +235,39 @@ class MegaStack:
         else:
             self.stack_objs = sorted_stacks
             return True
-    
+
+    def build_dep_graph(self):
+      # self.dep_graph = graph()
+      # for stack in self.stack_objs:
+      #   self.logger.info("Adding node %s to graph" % stack.name)
+      #   self.dep_graph.add_node(stack.name)
+      # for stack in self.stack_objs:
+      #   if stack.depends_on is not None:
+      #     for stack_dep in stack.depends_on:
+      #       self.logger.info("Adding edge (%s,%s) to graph" % (stack_dep,stack.name))
+      #       self.dep_graph.add_edge((stack_dep,stack.name))
+      self.dep_graph = StackDependencyGraph()
+      for stack in self.stack_objs:
+        self.logger.info("Adding node %s to graph" % stack.name)
+        self.dep_graph.add_node(stack.name)
+      for stack in self.stack_objs:
+        if stack.depends_on is not None:
+          for stack_dep in stack.depends_on:
+            self.logger.info("Adding edge (%s,%s) to graph" % (stack_dep,stack.name))
+            self.dep_graph.add_dependeny(stack.name, stack_dep)
+      loops = self.dep_graph.find_cycle()
+      if len(loops):
+        raise DependencyLoopError(loops)
+      # self.dep_graph = networkx.DiGraph()
+      # #for stack in self.stack_objs:
+      # #  self.logger.info("Adding node %s to graph" % stack.name)
+      # #  self.dep_graph.add_node(stack.name)
+      # for stack in self.stack_objs:
+      #   if stack.depends_on is not None:
+      #     for stack_dep in stack.depends_on:
+      #       self.logger.info("Adding edge (%s,%s) to graph" % (stack_dep, stack.name))
+      #       self.dep_graph.add_edge(stack_dep, stack.name )
+
     def check(self):
         """
         Checks the status of the yaml file. Displays parameters for the stacks it can.
