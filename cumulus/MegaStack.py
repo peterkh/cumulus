@@ -124,7 +124,7 @@ class MegaStack:
         if stack.depends_on is not None:
           for stack_dep in stack.depends_on:
             self.logger.info("Adding edge (%s,%s) to graph" % (stack_dep,stack.name))
-            self.dep_graph.add_dependency(stack.name, stack_dep)
+            self.dep_graph.add_dependency(stack_dep, stack.name)
       loops = self.dep_graph.find_cycle()
       if len(loops):
         raise DependencyLoopError(loops)

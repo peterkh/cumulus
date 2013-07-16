@@ -31,9 +31,9 @@ class StackDependencyGraph:
         """
         if parent in self.node_deps and parent in self.node_successors:
             if children in self.node_deps and children in self.node_successors:
-                if parent not in self.node_deps[children]:
-                    self.node_deps[parent].append(children)
-                    self.node_successors[children].append(parent)
+                if parent not in self.node_successors[children]:
+                    self.node_successors[parent].append(children)
+                    self.node_deps[children].append(parent)
                 else:
                     raise MutualDependencyError(parent, children)
             else:
@@ -48,11 +48,12 @@ class StackDependencyGraph:
         @raise ManipulationError: If node can't be found in the graph
         """
         if node in self.node_deps and node in self.node_successors:
-            del self.node_deps[node]
-            successors = self.node_successors[node]
-            for successor in successors:
+            for successor in self.node_successors[node]:
                 self.node_deps[successor].remove(node)
             del self.node_successors[node]
+            for dep in self.node_deps[node]:
+                self.node_successors[dep].remove(node)
+            del self.node_deps[node]
         else:
             raise KeyError("Node %s not present in graph" % node)
 
@@ -98,7 +99,7 @@ class StackDependencyGraph:
         @return: A list of nodes creating a loop in the graph or empty list if none is found
         @rtype: list
         """
-        graph = self.node_deps
+        graph = self.node_successors
 
         def find_cycle_to_ancestor(node, ancestor):
             """
@@ -162,3 +163,29 @@ class StackDependencyGraph:
             if len(self.node_deps[node_dep]) == 0:
                 edge_nodes.append(node_dep)
         return edge_nodes
+
+    def linear_traversal(self, node):
+        """
+        Graph linear traversal iterator.
+
+        @param node: Root node for graph traversal.
+        @type  node: str
+        @rtype:  iterator
+        @return: Traversal iterator.
+        """
+        def _dfs(visited, node):
+            """
+            Dependency-safe Depth-first search subfunction.
+            """
+            visited[node] = 1
+            yield node
+            # Explore recursively the connected component
+            for successor in self.node_successors[node]:
+                deps = self.node_deps[successor]
+                if successor not in visited and all([dep in visited for dep in deps]):
+                    for other in _dfs(visited, successor):
+                        yield other
+
+        visited = {}
+        for each in _dfs(visited, node):
+            yield each
