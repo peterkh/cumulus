@@ -15,5 +15,6 @@ setup(
         packages = find_packages(),
         include_package_data = True,
         install_requires=['PyYAML', 'argparse', 'boto', 'simplejson'],
+        tests_require=['nose'],
         scripts=glob('bin/*'),
 )

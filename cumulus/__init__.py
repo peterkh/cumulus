@@ -7,19 +7,10 @@ import argparse
 import logging
 import time
 from boto import cloudformation
-from MegaStack import MegaStack, StackDependencyGraph, DependencyError
+from MegaStack import MegaStack
 import sys
-from pygraph.algorithms.sorting import topological_sorting
-from pygraph.algorithms.accessibility import *
-from pygraph.algorithms.searching import *
-import networkx
-import pylab as p
-import uuid
 
-
-
-
-
+from .exceptions import DependencyGraphError
 
 def main():
 
@@ -63,8 +54,9 @@ def main():
     the_mega_stack = MegaStack(args.yamlfile)
     try:
       the_mega_stack.build_dep_graph()
-    except DependencyError,e :
+    except DependencyGraphError,e :
       logger.critical(repr(e))
+      sys.exit(1)
 
     # def get_relations(root):
     #   successors = networkx.dfs_successors(the_mega_stack.dep_graph, root)
