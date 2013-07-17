@@ -5,6 +5,10 @@ class CumulusException(Exception):
     """
     pass
 
+class StackStatusInconsistent(CumulusException):
+    """
+    This exception is raised when a stack is found in an inconsistent or unexpected state
+    """
 
 class DependencyGraphError(CumulusException):
     """
@@ -27,17 +31,18 @@ class LookupError(DependencyGraphError):
 
 
 class MutualDependencyError(DependencyGraphError):
+    pass
     def __init__(self, node1, node2):
-        self.node1 = node1
-        self.node2 = node2
+        self.args = [node1, node2]
 
-    def __repr__(self):
-        return "Mutual dependency between %s and %s" % (self.node1, self.node2)
+    def __str__(self):
+        return "Mutual dependency between %s and %s" % (self.args[0], self.args[1])
 
 
 class DependencyLoopError(DependencyGraphError):
     def __init__(self, loopnodes):
-        self.loopnodes = loopnodes
+        self.args = [loopnodes]
 
-    def __repr__(self):
-        return "Dependency loop detected: %s -> %s" % (" -> ".join(self.loopnodes), self.loopnodes[0])
+    def __str__(self):
+        nodes = self.args[0]
+        return "Dependency loop detected: %s -> %s" % (" -> ".join(nodes), nodes[0])

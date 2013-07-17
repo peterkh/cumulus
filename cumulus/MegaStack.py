@@ -6,7 +6,7 @@ import yaml
 from CFStack import CFStack
 from boto import cloudformation
 
-from .exceptions import DependencyLoopError
+from .exceptions import DependencyLoopError, StackStatusInconsistent
 from .graph import StackDependencyGraph
 
 
@@ -15,7 +15,8 @@ class MegaStack:
     """
     Main workder class for cumulus. Holds array of CFstack objects and does most of the calls to cloudformation API
     """
-    def __init__(self, yamlFile):
+    def __init__(self, yamlFile, enable_parallel_mode):
+        self.parallel = enable_parallel_mode
         self.logger = logging.getLogger(__name__)
         
         #load the yaml file and turn it into a dict
@@ -44,8 +45,8 @@ class MegaStack:
                 self.logger.critical("SNS Topic %s is not in the %s region." % (topic, self.region))
                 exit(1)
 
-        #Array for holding CFStack objects once we create them
-        self.stack_objs = []
+        #Hash for holding CFStack objects once we create them
+        self.stack_objs = dict()
 
         #Get the names of the sub stacks from the yaml file and sort in array
         self.cf_stacks = self.stackDict[self.name]['stacks'].keys()
@@ -70,8 +71,7 @@ class MegaStack:
                         self.logger.critical("SNS Topic %s is not in the %s region." % (topic, self.region))
                         exit(1)
                 if the_stack.has_key('cf_template'):
-                    self.stack_objs.append(
-                        CFStack(
+                    self.stack_objs[stack_name] = CFStack(
                             mega_stack_name=self.name,
                             name=stack_name,
                             params=the_stack['params'],
@@ -79,51 +79,21 @@ class MegaStack:
                             region=self.region,
                             sns_topic_arn=local_sns_arn,
                             depends_on=the_stack['depends']
-                        )
                     )
+        self.build_dep_graph()
+        self.ordered_stacks = list(self.dep_graph.linear_traversal(self.name))
 
-    def sort_stacks_by_deps(self):
-        """
-        Sort the array of stack_objs so they are in dependancy order
-        """
-        sorted_stacks = []
-        dep_graph = {}
-        no_deps = []
-        #Add all stacks without dependancies to no_deps
-        for stack in self.stack_objs:
-            if stack.depends_on is None:
-                no_deps.append(stack)
-            else:
-                dep_graph[stack.name] = stack.depends_on[:]
-        #Perform a topological sort on stacks in dep_graph
-        while len(no_deps) > 0:
-            stack = no_deps.pop()
-            sorted_stacks.append(stack)
-            for node in dep_graph.keys():
-                for deps in dep_graph[node]:
-                    if stack.cf_stack_name == deps:
-                        dep_graph[node].remove(stack.cf_stack_name)
-                        if len(dep_graph[node]) < 1:
-                            for n in self.stack_objs:
-                                if n.name == node:
-                                    no_deps.append(n)
-                            del(dep_graph[node])
-        if len(dep_graph) > 0:
-            self.logger.critical("Could not resolve dependancy order. Either circular dependancy or dependancy on stack not in yaml file.")
-            exit(1)
-        else:
-            self.stack_objs = sorted_stacks
-            return True
 
     def build_dep_graph(self):
       self.dep_graph = StackDependencyGraph()
-      for stack in self.stack_objs:
-        self.logger.info("Adding node %s to graph" % stack.name)
-        self.dep_graph.add_node(stack.name)
-      for stack in self.stack_objs:
+      for stack_id in self.stack_objs:
+        self.logger.debug("Adding node %s to graph" % stack_id)
+        self.dep_graph.add_node(stack_id)
+      for stack_id in self.stack_objs:
+        stack = self.stack_objs[stack_id]
         if stack.depends_on is not None:
           for stack_dep in stack.depends_on:
-            self.logger.info("Adding edge (%s,%s) to graph" % (stack_dep,stack.name))
+            self.logger.debug("Adding relation to graph: %s depends on %s" % (stack.name, stack_dep))
             self.dep_graph.add_dependency(stack_dep, stack.name)
       loops = self.dep_graph.find_cycle()
       if len(loops):
@@ -134,7 +104,8 @@ class MegaStack:
         """
         Checks the status of the yaml file. Displays parameters for the stacks it can.
         """
-        for stack in self.stack_objs:
+        for stack_id in self.ordered_stacks:
+            stack = self.stack_objs[stack_id]
             self.logger.info("Starting check of stack %s" % stack.name)
             if not stack.populate_params(self.cf_desc_stacks):
                 self.logger.info("Could not determine correct parameters for Cloudformation stack %s\n" % stack.name + 
@@ -142,26 +113,34 @@ class MegaStack:
             else:
                 self.logger.info("Stack %s would be created with following parameter values: %s" % (stack.cf_stack_name, stack.get_params_tuples()))
                 self.logger.info("Stack %s already exists in CF: %s" % (stack.cf_stack_name, bool(stack.exists_in_cf(self.cf_desc_stacks))))
-    
-    def create(self):
-        """
-        Create all stacks in the yaml file. Any that already exist are skipped (no attempt to update)
-        """
-        for stack in self.stack_objs:
-            self.logger.info("Starting checks for creation of stack: %s" % stack.name)
-            if stack.exists_in_cf(self.cf_desc_stacks):
-                self.logger.info("Stack %s already exists in cloudformation, skipping" % stack.name)
+
+    def adjust_graph(self):
+        for node in self.ordered_stacks:
+            if node not in self.dep_graph.nodes():
+                continue
+            self.logger.debug("Checking status of %s" % node)
+            stack = self.stack_objs[node]
+            stack_status = stack.get_status(self.cf_desc_stacks)
+            if not stack_status:
+                # Stack doesn't exist
+                continue
+            if stack_status in ("CREATE_COMPLETE", "UPDATE_COMPLETE"):
+                self.logger.info("Stack %s is complete" % stack.name)
+                self.dep_graph.del_node(node)
+            elif stack_status.endswith("_PROGRESS"):
+                self.logger.debug("Stack %s is still being processed" % stack.name)
             else:
-                if stack.deps_met(self.cf_desc_stacks) is False:
-                    self.logger.critical("Dependancies for stack %s not met and they should be, exiting..." % stack.name)
-                    exit(1)
-                if not stack.populate_params(self.cf_desc_stacks):
-                    self.logger.critical("Could not determine correct parameters for stack %s" % stack.name)
-                    exit(1)
-                
+                self.logger.critical("Stack %s is in inconsistent state: %s, manual intervention is required" % (stack.name, stack_status))
+                raise StackStatusInconsistent(stack.name, stack_status)
+
+
+    def create_stack(self, stack):
+        if not stack.exists_in_cf(self.cf_desc_stacks):
+            if stack.populate_params(self.cf_desc_stacks):
                 stack.read_template()
-                self.logger.info("Creating: %s, %s" % (stack.cf_stack_name, stack.get_params_tuples()))
+                self.logger.info("Creating: %s" % (stack.cf_stack_name))
                 try:
+                    pass
                     self.cfconn.create_stack(
                         stack_name=stack.cf_stack_name,
                         template_body=stack.template_body,
@@ -172,15 +151,52 @@ class MegaStack:
                 except Exception as e:
                     self.logger.critical("Creating stack %s failed. Error: %s" % (stack.cf_stack_name, e))
                     exit(1)
+            else:
+                self.logger.critical("Could not determine correct parameters for stack %s" % stack.name)
 
+    def create(self):
+        if self.parallel:
+            self.adjust_graph()
+            edge_nodes = self.dep_graph.get_edge_nodes()
+            while edge_nodes:
+                self.logger.debug("The followings stacks are free to go: %s" % str(edge_nodes))
+                for node in edge_nodes:
+                    self.logger.debug("Processing %s" % node)
+                    stack = self.stack_objs[node]
+                    try:
+                        self.create_stack(stack)
+                    except Exception as e:
+                        self.logger.critical("Creating stack %s failed. Error: %s" % (stack.cf_stack_name, e))
+                        exit(1)
+                self.logger.debug("Sleeping a few secs")
+                time.sleep(3)
+                self.cf_desc_stacks = self.cfconn.describe_stacks()
+                self.adjust_graph()
+                edge_nodes = self.dep_graph.get_edge_nodes()
+        else:
+            for node in self.ordered_stacks:
+                stack = self.stack_objs[node]
+                self.logger.info("Starting checks for creation of stack: %s" % stack.name)
+                if stack.exists_in_cf(self.cf_desc_stacks):
+                    self.logger.info("Stack %s already exists in cloudformation, skipping" % stack.name)
+                else:
+                    if stack.deps_met(self.cf_desc_stacks) is False:
+                        self.logger.critical("Dependancies for stack %s not met and they should be, exiting..." % stack.name)
+                        exit(1)
+                try:
+                    self.create_stack(stack)
+                except Exception as e:
+                    self.logger.critical("Creating stack %s failed. Error: %s" % (stack.cf_stack_name, e))
+                    exit(1)
                 create_result = self.watch_events(stack.cf_stack_name, "CREATE_IN_PROGRESS")
                 if create_result != "CREATE_COMPLETE":
                     self.logger.critical("Stack didn't create correctly, status is now %s" % create_result)
                     exit(1)
-                
+
                 #CF told us stack completed ok. Log message to that effect and refresh the list of stack objects in CF
                 self.logger.info("Finished creating stack: %s" % stack.cf_stack_name)
                 self.cf_desc_stacks = self.cfconn.describe_stacks()
+
 
     def delete(self):
         """
@@ -188,7 +204,8 @@ class MegaStack:
         Does this in reverse dependency order. Prompts for confirmation before deleting each stack
         """
         #Removing stacks so need to do it in reverse dependancy order
-        for stack in reversed(self.stack_objs):
+        for node in reversed(self.ordered_stacks):
+            stack = self.stack_objs[node]
             self.logger.info("Starting checks for deletion of stack: %s" % stack.name)
             if not stack.exists_in_cf(self.cf_desc_stacks):
                 self.logger.info("Stack %s doesn't exist in cloudformation, skipping" % stack.name)
@@ -213,7 +230,8 @@ class MegaStack:
         Attempts to update each of the stacks if template or parameters are diffenet to whats currently in cloudformation
         If a stack doesn't already exist. Logs critical error and exits.
         """
-        for stack in self.stack_objs:
+        for node in self.ordered_stacks:
+            stack = self.stack_objs[node]
             self.logger.info("Starting checks for update of stack: %s" % stack.name)
             if not stack.exists_in_cf(self.cf_desc_stacks):
                 self.logger.critical("Stack %s doesn't exist in cloudformation, can't update something that doesn't exist." % stack.name)

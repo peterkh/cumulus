@@ -9,7 +9,7 @@ import time
 from boto import cloudformation
 from MegaStack import MegaStack
 
-from .exceptions import DependencyGraphError
+from .exceptions import CumulusException
 
 def main():
 
@@ -19,7 +19,7 @@ def main():
     conf_parser.add_argument("-l", "--log", dest="loglevel", required=False, default="info", help="Log Level for output messages, CRITICAL, ERROR, WARNING, INFO or DEBUG")
     conf_parser.add_argument("-L", "--botolog", dest="botologlevel", required=False, default="critical", help="Log Level for boto, CRITICAL, ERROR, WARNING, INFO or DEBUG")
     conf_parser.add_argument("-s", "--stack", dest="stackname", required=False, help="The stack name, used with the watch action, ignored for other actions")
-    conf_parser.add_argument("-p", "--parallel", dest="parallel", required=False, default=True, action='store_false', help="Enable parallel processing (EXPERIMENTAL)")
+    conf_parser.add_argument("-p", "--parallel", dest="parallel", required=False, default=False, action='store_true', help="Enable parallel processing (EXPERIMENTAL)")
     args = conf_parser.parse_args()
 
     #Validate that action is something we know what to do with
@@ -51,23 +51,23 @@ def main():
     logging.getLogger('boto').setLevel(boto_numeric_level)
 
     #Create the mega_stack object and sort out dependencies
-    the_mega_stack = MegaStack(args.yamlfile)
     try:
-      the_mega_stack.build_dep_graph()
-    except DependencyGraphError,e :
-      logger.critical("DependencyGraphError: %s"% repr(e))
+      the_mega_stack = MegaStack(args.yamlfile, enable_parallel_mode=args.parallel)
+    except CumulusException,e :
+      logger.critical("CumulusException: %s"% str(e))
       return
 
     #Print some info about what we found in the yaml and dependency order
     logger.info("Mega stack name: %s" % the_mega_stack.name)
     logger.info("Found %s CF stacks in yaml." % len(the_mega_stack.cf_stacks))
-    logger.info("Processing stacks in the following order: %s" % [x.name for x in the_mega_stack.stack_objs])
-    for stack in the_mega_stack.stack_objs:
-        logger.debug("%s depends on %s" % (stack.name, stack.depends_on))
 
     #Run the method of the mega stack object for the action provided
     if args.action == 'create':
-        the_mega_stack.create()
+        if args.parallel:
+            logger.info("Parallel mode enabled. Order of execution can't be accurately predicted.")
+        else:
+            logger.info("Processing stacks in the following order: %s" % the_mega_stack.ordered_stacks)
+        the_mega_stack.action_create()
 
     if args.action == 'check':
         the_mega_stack.check()

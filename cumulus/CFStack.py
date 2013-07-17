@@ -48,7 +48,7 @@ class CFStack:
                 dep_met = False
                 #check CF if stack we depend on has been created successfully
                 for stack in current_cf_stacks:
-                    if str(stack.stack_name) == dep:
+                    if str(stack.stack_name) in (dep, "%s-%s" % (self.mega_stack_name, dep)):
                         dep_met = True
                 if not dep_met:
                     return False
@@ -59,6 +59,12 @@ class CFStack:
             if str(stack.stack_name) == self.cf_stack_name:
                 return stack
         return False
+
+    def get_status(self, current_cf_stacks):
+        for stack in current_cf_stacks:
+            if str(stack.stack_name) == self.cf_stack_name:
+                return stack.stack_status
+
 
     def populate_params(self, current_cf_stacks):
         #If we have no parameters in the yaml file, set params to an empty dict and return true
