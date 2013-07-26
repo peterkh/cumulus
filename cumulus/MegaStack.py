@@ -81,7 +81,10 @@ class MegaStack:
                             depends_on=the_stack['depends']
                     )
         self.build_dep_graph()
-        self.ordered_stacks = list(self.dep_graph.linear_traversal(self.name))
+        if self.name in self.stack_objs:
+            self.ordered_stacks = list(self.dep_graph.linear_traversal(self.name))
+        else:
+            self.ordered_stacks = list(self.dep_graph.linear_traversal())
 
 
     def build_dep_graph(self):

@@ -67,7 +67,7 @@ def main():
             logger.info("Parallel mode enabled. Order of execution can't be accurately predicted.")
         else:
             logger.info("Processing stacks in the following order: %s" % the_mega_stack.ordered_stacks)
-        the_mega_stack.action_create()
+        the_mega_stack.create()
 
     if args.action == 'check':
         the_mega_stack.check()

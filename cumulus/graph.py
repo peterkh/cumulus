@@ -164,7 +164,7 @@ class StackDependencyGraph:
                 edge_nodes.append(node_dep)
         return edge_nodes
 
-    def linear_traversal(self, node):
+    def linear_traversal(self, node=None):
         """
         Graph linear traversal iterator.
 
@@ -177,6 +177,8 @@ class StackDependencyGraph:
             """
             Dependency-safe Depth-first search subfunction.
             """
+            if not node and len(self.nodes()):
+                node = self.nodes()[0]
             visited[node] = 1
             yield node
             # Explore recursively the connected component
