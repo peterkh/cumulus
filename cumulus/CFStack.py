@@ -142,7 +142,7 @@ class CFStack:
         elif var_type == 'output':
             for o in the_stack.outputs:
                 if str(o.key) == var_name:
-                    return str(o.key)
+                    return str(o.value)
         elif var_type == 'resource':
             for r in self.get_cf_stack(stack = source_stack, resources = True):
                 if str(r.logical_resource_id) == var_name:
