@@ -1,6 +1,7 @@
 import logging
 import simplejson
 from boto import cloudformation
+from jinja2 import Template
 
 
 class CFStack:
@@ -164,8 +165,9 @@ class CFStack:
 
     def read_template(self):
         try:
-            template_file = open(self.template_name, 'r')
-            template = simplejson.load(template_file)
+            template_contents = open(self.template_name, 'r').read()
+            template = Template(template_contents)
+            template = simplejson.loads(template.render())
         except Exception as e:
             print "Cannot open template file for stack %s, error: %s" % (self.name, e)
             exit(1)
