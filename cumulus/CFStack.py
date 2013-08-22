@@ -76,6 +76,8 @@ class CFStack:
                     elif self.yaml_params[param].has_key('source') and self.yaml_params[param].has_key('type') and self.yaml_params[param].has_key('variable'):
                         if self.yaml_params[param]['source'] == self.mega_stack_name:
                             source_stack = self.yaml_params[param]['source']
+                        elif self.yaml_params[param]['source'][:1] == '-':
+                            source_stack = self.yaml_params[param]['source'][1:]
                         else:
                             source_stack = "%s-%s" % (self.mega_stack_name, self.yaml_params[param]['source'])
                         self.params[param] = self.get_value_from_cf(
