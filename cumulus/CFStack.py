@@ -1,6 +1,7 @@
 import logging
 import simplejson
 from boto import cloudformation
+from jinja2 import Template
 
 
 class CFStack:
@@ -76,8 +77,6 @@ class CFStack:
                     elif self.yaml_params[param].has_key('source') and self.yaml_params[param].has_key('type') and self.yaml_params[param].has_key('variable'):
                         if self.yaml_params[param]['source'] == self.mega_stack_name:
                             source_stack = self.yaml_params[param]['source']
-                        elif self.yaml_params[param]['source'][:1] == '-':
-                            source_stack = self.yaml_params[param]['source'][1:]
                         else:
                             source_stack = "%s-%s" % (self.mega_stack_name, self.yaml_params[param]['source'])
                         self.params[param] = self.get_value_from_cf(
@@ -164,8 +163,9 @@ class CFStack:
 
     def read_template(self):
         try:
-            template_file = open(self.template_name, 'r')
-            template = simplejson.load(template_file)
+            template_contents = open(self.template_name, 'r').read()
+            template = Template(template_contents)
+            template = simplejson.loads(template.render())
         except Exception as e:
             print "Cannot open template file for stack %s, error: %s" % (self.name, e)
             exit(1)
