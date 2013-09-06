@@ -39,6 +39,7 @@ class MegaStack:
                 self.logger.critical("SNS Topic %s is not in the %s region." % (topic, self.region))
                 exit(1)
 
+        self.global_tags = self.stackDict[self.name].get('tags', {})
         #Array for holding CFStack objects once we create them
         self.stack_objs = []
 
@@ -58,12 +59,17 @@ class MegaStack:
         for stack_name in self.cf_stacks:
             the_stack = self.stackDict[self.name]['stacks'][stack_name]
             if type(the_stack) is dict:
+                if the_stack.get('disable', False):
+                    self.logger.warning("Stack %s is disabled by configuration directive. Skipping" % stack_name)
+                    continue
                 local_sns_arn = the_stack.get('sns-topic-arn', self.sns_topic_arn)
                 if isinstance(local_sns_arn, str): local_sns_arn = [local_sns_arn]
                 for topic in local_sns_arn:
                     if topic.split(':')[3] != self.region:
                         self.logger.critical("SNS Topic %s is not in the %s region." % (topic, self.region))
                         exit(1)
+                local_tags = the_stack.get('tags', {})
+                merged_tags = dict(self.global_tags.items() + local_tags.items())
                 if the_stack.has_key('cf_template'):
                     self.stack_objs.append(
                         CFStack(
@@ -73,7 +79,8 @@ class MegaStack:
                             template_name=the_stack['cf_template'],
                             region=self.region,
                             sns_topic_arn=local_sns_arn,
-                            depends_on=the_stack['depends']
+                            depends_on=the_stack['depends'],
+                            tags=merged_tags
                         )
                     )
 
@@ -147,7 +154,8 @@ class MegaStack:
                         template_body=stack.template_body,
                         parameters=stack.get_params_tuples(),
                         capabilities=['CAPABILITY_IAM'],
-                        notification_arns=stack.sns_topic_arn
+                        notification_arns=stack.sns_topic_arn,
+                        tags=stack.tags
                     )
                 except Exception as e:
                     self.logger.critical("Creating stack %s failed. Error: %s" % (stack.cf_stack_name, e))
@@ -222,7 +230,8 @@ class MegaStack:
                             stack_name    = stack.cf_stack_name,
                             template_body = stack.template_body,
                             parameters    = stack.get_params_tuples(),
-                            capabilities  = ['CAPABILITY_IAM']
+                            capabilities  = ['CAPABILITY_IAM'],
+                            tags          = stack.tags
                             )
                 except boto.exception.BotoServerError as e:
                     e_message_dict = simplejson.loads(e.error_message)

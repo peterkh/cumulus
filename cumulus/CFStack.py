@@ -4,7 +4,7 @@ from boto import cloudformation
 
 
 class CFStack:
-    def __init__(self, mega_stack_name, name, params, template_name, region, sns_topic_arn, depends_on = None):
+    def __init__(self, mega_stack_name, name, params, template_name, region, sns_topic_arn, tags = {}, depends_on = None):
         self.logger = logging.getLogger(__name__)
         if mega_stack_name == name:
             self.cf_stack_name = name
@@ -27,6 +27,7 @@ class CFStack:
                     self.depends_on.append("%s-%s" % (mega_stack_name, dep))
         self.region = region
         self.sns_topic_arn = sns_topic_arn
+        self.tags = tags
 
         try:
             open(template_name, 'r')
