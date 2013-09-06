@@ -3,6 +3,20 @@ Cumulus
 
 Helps manage AWS CloudFormation stacks
 
+
+News
+----------------------------------
+### 2013-09-06
++ You can now define stack level tags using the _tags_ directive in the YaML file, like:
+
+   ```
+   tags:
+      tag1: value
+      tag2: value
+   ```
+   tags can be specified both at root level and sub-stack level. tags at root level are applied to all sub-stacks and duplicate sub-stack tags will override root level tags
++ You can use the directive `disabled: true` in any sub-stack to prevent it from being created/updated/deleted
+
 The problem
 ----------------------------------
 
