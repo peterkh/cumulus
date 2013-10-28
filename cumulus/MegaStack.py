@@ -70,6 +70,8 @@ class MegaStack:
                         exit(1)
                 local_tags = the_stack.get('tags', {})
                 merged_tags = dict(self.global_tags.items() + local_tags.items())
+                # Add static cumulus-stack tag
+                merged_tags['cumulus-stack'] = self.name
                 if the_stack.has_key('cf_template'):
                     self.stack_objs.append(
                         CFStack(
