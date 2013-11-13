@@ -119,11 +119,13 @@ class MegaStack:
             self.stack_objs = sorted_stacks
             return True
     
-    def check(self):
+    def check(self, stack_name = None):
         """
         Checks the status of the yaml file. Displays parameters for the stacks it can.
         """
         for stack in self.stack_objs:
+            if stack_name and stack.name != stack_name:
+                continue
             self.logger.info("Starting check of stack %s" % stack.name)
             if not stack.populate_params(self.cf_desc_stacks):
                 self.logger.info("Could not determine correct parameters for Cloudformation stack %s\n" % stack.name + 
@@ -132,11 +134,13 @@ class MegaStack:
                 self.logger.info("Stack %s would be created with following parameter values: %s" % (stack.cf_stack_name, stack.get_params_tuples()))
                 self.logger.info("Stack %s already exists in CF: %s" % (stack.cf_stack_name, bool(stack.exists_in_cf(self.cf_desc_stacks))))
     
-    def create(self):
+    def create(self, stack_name = None):
         """
         Create all stacks in the yaml file. Any that already exist are skipped (no attempt to update)
         """
         for stack in self.stack_objs:
+            if stack_name and stack.name != stack_name:
+                continue
             self.logger.info("Starting checks for creation of stack: %s" % stack.name)
             if stack.exists_in_cf(self.cf_desc_stacks):
                 self.logger.info("Stack %s already exists in cloudformation, skipping" % stack.name)
@@ -172,13 +176,15 @@ class MegaStack:
                 self.logger.info("Finished creating stack: %s" % stack.cf_stack_name)
                 self.cf_desc_stacks = self.cfconn.describe_stacks()
 
-    def delete(self):
+    def delete(self, stack_name = None):
         """
         Delete all the stacks from cloudformation.
         Does this in reverse dependency order. Prompts for confirmation before deleting each stack
         """
         #Removing stacks so need to do it in reverse dependancy order
         for stack in reversed(self.stack_objs):
+            if stack_name and stack.name != stack_name:
+                continue
             self.logger.info("Starting checks for deletion of stack: %s" % stack.name)
             if not stack.exists_in_cf(self.cf_desc_stacks):
                 self.logger.info("Stack %s doesn't exist in cloudformation, skipping" % stack.name)
@@ -198,12 +204,14 @@ class MegaStack:
                 self.logger.info("Finished deleting stack: %s" % stack.cf_stack_name)
                 self.cf_desc_stacks = self.cfconn.describe_stacks()
 
-    def update(self):
+    def update(self, stack_name = None):
         """
         Attempts to update each of the stacks if template or parameters are diffenet to whats currently in cloudformation
         If a stack doesn't already exist. Logs critical error and exits.
         """
         for stack in self.stack_objs:
+            if stack_name and stack.name != stack_name:
+                continue
             self.logger.info("Starting checks for update of stack: %s" % stack.name)
             if not stack.exists_in_cf(self.cf_desc_stacks):
                 self.logger.critical("Stack %s doesn't exist in cloudformation, can't update something that doesn't exist." % stack.name)

@@ -60,16 +60,16 @@ def main():
 
     #Run the method of the mega stack object for the action provided
     if args.action == 'create':
-        the_mega_stack.create()
+        the_mega_stack.create(args.stackname)
 
     if args.action == 'check':
-        the_mega_stack.check()
+        the_mega_stack.check(args.stackname)
 
     if args.action == 'delete':
-        the_mega_stack.delete()
+        the_mega_stack.delete(args.stackname)
 
     if args.action == 'update':
-        the_mega_stack.update()
+        the_mega_stack.update(args.stackname)
 
     if args.action == 'watch':
         the_mega_stack.watch(args.stackname)
