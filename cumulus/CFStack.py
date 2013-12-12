@@ -168,7 +168,7 @@ class CFStack:
             template_file = open(self.template_name, 'r')
             template = simplejson.load(template_file)
         except Exception as e:
-            print "Cannot open template file for stack %s, error: %s" % (self.name, e)
+            print "Cannot parse %s template for stack %s. Error: %s" % (self.template_name, self.name, e)
             exit(1)
         self.template_body = simplejson.dumps(template)
         return True
