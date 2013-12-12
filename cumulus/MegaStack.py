@@ -12,7 +12,7 @@ class MegaStack:
     """
     def __init__(self, yamlFile):
         self.logger = logging.getLogger(__name__)
-        
+
         #load the yaml file and turn it into a dict
         thefile = open(yamlFile, 'r')
         self.stackDict = yaml.safe_load(thefile)
@@ -21,7 +21,7 @@ class MegaStack:
         if len(self.stackDict.keys()) != 1:
             self.logger.critical("Need one and only one mega stack name at the top level, found %s" % len(self.stackDict.keys()))
             exit(1)
-        
+
         #How we know we only have one top element, that must be the mega stack name
         self.name = self.stackDict.keys()[0]
 
@@ -45,7 +45,7 @@ class MegaStack:
 
         #Get the names of the sub stacks from the yaml file and sort in array
         self.cf_stacks = self.stackDict[self.name]['stacks'].keys()
-        
+
         #Megastack holds the connection to cloudformation and list of stacks currently in our region
         #Stops us making lots of calls to cloudformation API for each stack
         try:
@@ -118,7 +118,7 @@ class MegaStack:
         else:
             self.stack_objs = sorted_stacks
             return True
-    
+
     def check(self, stack_name = None):
         """
         Checks the status of the yaml file. Displays parameters for the stacks it can.
@@ -133,7 +133,7 @@ class MegaStack:
             else:
                 self.logger.info("Stack %s would be created with following parameter values: %s" % (stack.cf_stack_name, stack.get_params_tuples()))
                 self.logger.info("Stack %s already exists in CF: %s" % (stack.cf_stack_name, bool(stack.exists_in_cf(self.cf_desc_stacks))))
-    
+
     def create(self, stack_name = None):
         """
         Create all stacks in the yaml file. Any that already exist are skipped (no attempt to update)
@@ -151,7 +151,7 @@ class MegaStack:
                 if not stack.populate_params(self.cf_desc_stacks):
                     self.logger.critical("Could not determine correct parameters for stack %s" % stack.name)
                     exit(1)
-                
+
                 stack.read_template()
                 self.logger.info("Creating: %s, %s" % (stack.cf_stack_name, stack.get_params_tuples()))
                 try:
@@ -171,7 +171,7 @@ class MegaStack:
                 if create_result != "CREATE_COMPLETE":
                     self.logger.critical("Stack didn't create correctly, status is now %s" % create_result)
                     exit(1)
-                
+
                 #CF told us stack completed ok. Log message to that effect and refresh the list of stack objects in CF
                 self.logger.info("Finished creating stack: %s" % stack.cf_stack_name)
                 self.cf_desc_stacks = self.cfconn.describe_stacks()
@@ -255,10 +255,10 @@ class MegaStack:
                 if update_result != "UPDATE_COMPLETE":
                     self.logger.critical("Stack didn't update correctly, status is now %s" % update_result)
                     exit(1)
-                
+
                 self.logger.info("Finished updating stack: %s" % stack.cf_stack_name)
 
-    
+
     def watch(self, stack_name):
         """
         Watch events for a given cloudformation stack. It will keep watching until its state changes
@@ -277,7 +277,7 @@ class MegaStack:
         if not the_cf_stack:
             self.logger.error("Stack %s doesn't exist in cloudformation, can't watch something that doesn't exist." % stack.name)
             return False
-        
+
         self.logger.info("Watching stack %s, while in state %s." % (the_stack.cf_stack_name, str(the_cf_stack.stack_status)))
         self.watch_events(the_stack.cf_stack_name, str(the_cf_stack.stack_status))
 
