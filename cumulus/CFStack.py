@@ -2,9 +2,8 @@ import logging
 import simplejson
 from boto import cloudformation
 
-
 class CFStack:
-    def __init__(self, mega_stack_name, name, params, template_name, region, sns_topic_arn, tags = {}, depends_on = None):
+    def __init__(self, mega_stack_name, name, params, template_name, region, sns_topic_arn, tags = None, depends_on = None):
         self.logger = logging.getLogger(__name__)
         if mega_stack_name == name:
             self.cf_stack_name = name
@@ -27,7 +26,12 @@ class CFStack:
                     self.depends_on.append("%s-%s" % (mega_stack_name, dep))
         self.region = region
         self.sns_topic_arn = sns_topic_arn
-        self.tags = tags
+        
+        #Safer than setting default value for tags = {}
+        if tags is None:
+            self.tags = {}
+        else:
+            self.tags = tags
 
         try:
             open(template_name, 'r')
@@ -67,7 +71,6 @@ class CFStack:
             self.params = {}
             return True
         if self.deps_met(current_cf_stacks):
-            cfconn = cloudformation.connect_to_region(self.region)
             for param in self.yaml_params.keys():
                 if type(self.yaml_params[param]) is dict:
                     #Static value set, so use it
@@ -135,8 +138,6 @@ class CFStack:
         Get a variable from a existing cloudformation stack, var_type should be parameter, resource or output.
         If using resource, provide the logical ID and this will return the Physical ID
         """
-        cfconn = cloudformation.connect_to_region(self.region)
-
         the_stack = self.get_cf_stack(stack = source_stack)
         if var_type == 'parameter':
             for p in the_stack.parameters:
@@ -215,9 +216,4 @@ class CFStack:
         #We got to the end without returning False, so must be fine.
         return True
 
-    def print_template_diff(self, current_cf_stacks):
-        cf_stack = self.exists_in_cf(current_cf_stacks)
-        cf_template_dict = simplejson.loads(cf_stack.get_template()['GetTemplateResponse']['GetTemplateResult']['TemplateBody'])
-
-        self.logger.info(datadiff.diff(cf_template_dict, simplejson.loads(self.template_body), context=0))
 
