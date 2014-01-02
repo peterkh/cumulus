@@ -5,8 +5,6 @@
 
 import argparse
 import logging
-import time
-from boto import cloudformation
 from MegaStack import MegaStack
 
 def main():
@@ -27,7 +25,7 @@ def main():
 
     #Make sure we can read the yaml file provided
     try:
-        readable = open(args.yamlfile, 'r')
+        open(args.yamlfile, 'r')
     except IOError as e:
         print "Cannot read yaml file %s: %s" % (args.yamlfile, e)
         exit(1)
@@ -36,14 +34,14 @@ def main():
     numeric_level = getattr(logging, args.loglevel.upper(), None)
     boto_numeric_level = getattr(logging, args.botologlevel.upper(), None)
     if not isinstance(numeric_level, int):
-        print 'Invalid log level: %s' % loglevel
+        print 'Invalid log level: %s' % args.loglevel
         exit(1)
     logging.basicConfig(level=numeric_level)
     logger = logging.getLogger(__name__)
 
     #Get and configure the log level for boto
     if not isinstance(boto_numeric_level, int):
-        logger.critical("Invalid boto log level: %s" % botologlevel)
+        logger.critical("Invalid boto log level: %s", args.botologlevel)
         exit(1)
     logging.getLogger('boto').setLevel(boto_numeric_level)
 
@@ -52,11 +50,11 @@ def main():
     the_mega_stack.sort_stacks_by_deps()
 
     #Print some info about what we found in the yaml and dependency order
-    logger.info("Mega stack name: %s" % the_mega_stack.name)
-    logger.info("Found %s CF stacks in yaml." % len(the_mega_stack.cf_stacks))
-    logger.info("Processing stacks in the following order: %s" % [x.name for x in the_mega_stack.stack_objs])
+    logger.info("Mega stack name: %s", the_mega_stack.name)
+    logger.info("Found %s CF stacks in yaml.", len(the_mega_stack.cf_stacks))
+    logger.info("Processing stacks in the following order: %s", [x.name for x in the_mega_stack.stack_objs])
     for stack in the_mega_stack.stack_objs:
-        logger.debug("%s depends on %s" % (stack.name, stack.depends_on))
+        logger.debug("%s depends on %s", stack.name, stack.depends_on)
 
     #Run the method of the mega stack object for the action provided
     if args.action == 'create':
