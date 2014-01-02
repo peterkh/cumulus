@@ -15,7 +15,7 @@ News
       tag2: value
    ```
    tags can be specified both at root level and sub-stack level. tags at root level are applied to all sub-stacks and duplicate sub-stack tags will override root level tags
-+ You can use the directive `disabled: true` in any sub-stack to prevent it from being created/updated/deleted
++ You can use the directive `disable: true` in any sub-stack to prevent it from being created/updated/deleted
 
 The problem
 ----------------------------------
