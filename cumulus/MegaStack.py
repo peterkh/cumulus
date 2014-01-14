@@ -235,6 +235,7 @@ class MegaStack:
                     #stack.print_template_diff(self.cf_desc_stacks)
                 self.logger.info("Starting update of stack %s with parameters: %s" % (stack.name, stack.get_params_tuples()))
                 self.cfconn.validate_template(template_body = stack.template_body)
+                    
                 try:
                     self.cfconn.update_stack(
                             stack_name    = stack.cf_stack_name,
@@ -244,13 +245,17 @@ class MegaStack:
                             tags          = stack.tags
                             )
                 except boto.exception.BotoServerError as e:
-                    e_message_dict = simplejson.loads(e.error_message)
-                    if str(e_message_dict["Error"]["Message"]) == "No updates are to be performed.":
-                        self.logger.error("Cloudformation has no updates to perform on %s, this might be because there is a parameter with NoEcho set" % stack.name)
-                        continue
-                    else:
-                        self.logger.debug("Got error message: %s" % e_message_dict["Error"]["Message"])
-                        raise e
+                    try:
+                        e_message_dict = simplejson.loads(e.error_message)
+                        if str(e_message_dict["Error"]["Message"]) == "No updates are to be performed.":
+                            self.logger.error("Cloudformation has no updates to perform on %s, this might be because there is a parameter with NoEcho set" % stack.name)
+                            continue
+                        else:
+                            self.logger.error("Got error message: %s" % e_message_dict["Error"]["Message"])
+                            raise e
+                    except simplejson.decoder.JSONDecodeError:
+                        self.logger.critical("Unknown error updating stack: %s", e)
+                        exit(1)
                 update_result = self.watch_events(stack.cf_stack_name, ["UPDATE_IN_PROGRESS", "UPDATE_COMPLETE_CLEANUP_IN_PROGRESS"])
                 if update_result != "UPDATE_COMPLETE":
                     self.logger.critical("Stack didn't update correctly, status is now %s" % update_result)
@@ -258,6 +263,8 @@ class MegaStack:
 
                 self.logger.info("Finished updating stack: %s" % stack.cf_stack_name)
 
+            #avoid getting rate limited
+            time.sleep(2)
 
     def watch(self, stack_name):
         """
