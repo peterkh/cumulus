@@ -3,6 +3,19 @@ Cumulus
 
 Helps manage AWS CloudFormation stacks
 
+News
+----------------------------------
+### 2014-04-17
++ You can now insert PyStache {{}} style variables to import environment variables.
+   ```
+   stack:
+      ami_id: {{AMIID}}
+   ```
+   ```
+   AMID=ami-1q23123123 cumulus -y example_stack.yaml -a create
+   ```
+
+   would be seen by cloudformation with the ami id of ami-1q23123123
 
 News
 ----------------------------------
