@@ -3,6 +3,8 @@ import logging
 import simplejson
 import time
 import yaml
+import pystache
+import os
 from CFStack import CFStack
 from boto import cloudformation
 
@@ -15,8 +17,10 @@ class MegaStack:
 
         #load the yaml file and turn it into a dict
         thefile = open(yamlFile, 'r')
-        self.stackDict = yaml.safe_load(thefile)
 
+        renderedFile = pystache.render(thefile.read(), dict(os.environ))
+
+        self.stackDict = yaml.safe_load(renderedFile)
         #Make sure there is only one top level element in the yaml file
         if len(self.stackDict.keys()) != 1:
             self.logger.critical("Need one and only one mega stack name at the top level, found %s" % len(self.stackDict.keys()))
