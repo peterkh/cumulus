@@ -307,10 +307,48 @@ class MegaStack:
         except boto.exception.BotoServerError as e:
             if str(e.error_message) == "Stack:%s does not exist" % (stack_name):
                 return "STACK_GONE"
+
+        status_color_map = {
+            'CREATE_IN_PROGRESS': '\033[1;33m',
+            'CREATE_FAILED': '\033[1;31m',
+            'CREATE_COMPLETE': '\033[1;32m',
+            'ROLLBACK_IN_PROGRESS': '\033[1;33m',
+            'ROLLBACK_FAILED': '\033[1;31m',
+            'ROLLBACK_COMPLETE': '\033[1;30m',
+            'DELETE_IN_PROGRESS': '\033[1;33m',
+            'DELETE_FAILED': '\033[1;31m',
+            'DELETE_COMPLETE': '\033[1;30m',
+            'UPDATE_IN_PROGRESS': '\033[1;33m',
+            'UPDATE_COMPLETE_CLEANUP_IN_PROGRESS': '\033[1;33m',
+            'UPDATE_COMPLETE': '\033[1;32m',
+            'UPDATE_ROLLBACK_IN_PROGRESS': '\033[1;33m',
+            'UPDATE_ROLLBACK_FAILED': '\033[1;31m',
+            'UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS': '\033[1;33m',
+            'UPDATE_ROLLBACK_COMPLETE': '\033[1;32m',
+            'UPDATE_FAILED': '\033[1;31m',
+        }
         #print the last 5 events, so we get to see the start of the action we are performing
         self.logger.info("Last 5 events for this stack:")
-        for e in reversed(events[:5]):
-            self.logger.info("%s %s %s %s %s %s" % (e.timestamp.isoformat(), e.resource_status, e.resource_type, e.logical_resource_id, e.physical_resource_id, e.resource_status_reason))
+        for event in reversed(events[:5]):
+            if self.stackDict[self.name].get('highlight-output', True):
+                self.logger.info("%s %s%s\033[0m %s %s %s %s" % (
+                    event.timestamp.isoformat(),
+                    status_color_map.get(event.resource_status, ''),
+                    event.resource_status,
+                    event.resource_type,
+                    event.logical_resource_id,
+                    event.physical_resource_id,
+                    event.resource_status_reason,
+                ))
+            else:
+                self.logger.info("%s %s %s %s %s %s" % (
+                    event.timestamp.isoformat(),
+                    event.resource_status,
+                    event.resource_type,
+                    event.logical_resource_id,
+                    event.physical_resource_id,
+                    event.resource_status_reason,
+                ))
         status = str(cfstack_obj.stack_status)
         self.logger.info("New events:")
         while status in while_status:
@@ -325,7 +363,25 @@ class MegaStack:
                 events_to_log.insert(0, new_events[x])
                 x += 1
             for event in events_to_log:
-                self.logger.info("%s %s %s %s %s %s" % (event.timestamp.isoformat(), event.resource_status, event.resource_type, event.logical_resource_id, event.physical_resource_id, event.resource_status_reason))
+                if self.stackDict[self.name].get('highlight-output', True):
+                    self.logger.info("%s %s%s\033[0m %s %s %s %s" % (
+                        event.timestamp.isoformat(),
+                        status_color_map.get(event.resource_status, ''),
+                        event.resource_status,
+                        event.resource_type,
+                        event.logical_resource_id,
+                        event.physical_resource_id,
+                        event.resource_status_reason,
+                    ))
+                else:
+                    self.logger.info("%s %s %s %s %s %s" % (
+                        event.timestamp.isoformat(),
+                        event.resource_status,
+                        event.resource_type,
+                        event.logical_resource_id,
+                        event.physical_resource_id,
+                        event.resource_status_reason,
+                    ))
             if x > 0:
                 events = new_events[:]
             cfstack_obj.update()
