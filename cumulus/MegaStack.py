@@ -8,6 +8,7 @@ import os
 from CFStack import CFStack
 from boto import cloudformation
 
+
 class MegaStack:
     """
     Main workder class for cumulus. Holds array of CFstack objects and does most of the calls to cloudformation API
@@ -30,14 +31,15 @@ class MegaStack:
         self.name = self.stackDict.keys()[0]
 
         #Find and set the mega stacks region. Exit if we can't find it
-        if self.stackDict[self.name].has_key('region'):
+        if 'region' in self.stackDict[self.name]:
             self.region = self.stackDict[self.name]['region']
         else:
             self.logger.critical("No region specified for mega stack, don't know where to build it.")
             exit(1)
 
         self.sns_topic_arn = self.stackDict[self.name].get('sns-topic-arn', [])
-        if isinstance(self.sns_topic_arn, str): self.sns_topic_arn = [self.sns_topic_arn]
+        if isinstance(self.sns_topic_arn, str):
+            self.sns_topic_arn = [self.sns_topic_arn]
         for topic in self.sns_topic_arn:
             if topic.split(':')[3] != self.region:
                 self.logger.critical("SNS Topic %s is not in the %s region." % (topic, self.region))
@@ -56,7 +58,7 @@ class MegaStack:
             self.cfconn = cloudformation.connect_to_region(self.region)
             self.cf_desc_stacks = self.cfconn.describe_stacks()
         except boto.exception.NoAuthHandlerFound as e:
-            self.logger.critical("No credentials found for connecting to cloudformation: %s" % e )
+            self.logger.critical("No credentials found for connecting to cloudformation: %s" % e)
             exit(1)
 
         #iterate through the stacks in the yaml file and create CFstack objects for them
@@ -67,7 +69,8 @@ class MegaStack:
                     self.logger.warning("Stack %s is disabled by configuration directive. Skipping" % stack_name)
                     continue
                 local_sns_arn = the_stack.get('sns-topic-arn', self.sns_topic_arn)
-                if isinstance(local_sns_arn, str): local_sns_arn = [local_sns_arn]
+                if isinstance(local_sns_arn, str):
+                    local_sns_arn = [local_sns_arn]
                 for topic in local_sns_arn:
                     if topic.split(':')[3] != self.region:
                         self.logger.critical("SNS Topic %s is not in the %s region." % (topic, self.region))
@@ -76,7 +79,7 @@ class MegaStack:
                 merged_tags = dict(self.global_tags.items() + local_tags.items())
                 # Add static cumulus-stack tag
                 merged_tags['cumulus-stack'] = self.name
-                if the_stack.has_key('cf_template'):
+                if 'cf_template' in the_stack:
                     self.stack_objs.append(
                         CFStack(
                             mega_stack_name=self.name,
@@ -123,7 +126,7 @@ class MegaStack:
             self.stack_objs = sorted_stacks
             return True
 
-    def check(self, stack_name = None):
+    def check(self, stack_name=None):
         """
         Checks the status of the yaml file. Displays parameters for the stacks it can.
         """
@@ -132,13 +135,15 @@ class MegaStack:
                 continue
             self.logger.info("Starting check of stack %s" % stack.name)
             if not stack.populate_params(self.cf_desc_stacks):
-                self.logger.info("Could not determine correct parameters for Cloudformation stack %s\n" % stack.name + 
-                        "\tMost likely because stacks it depends on haven't been created yet.")
+                self.logger.info(
+                    "Could not determine correct parameters for Cloudformation stack %s\n" % stack.name +
+                    "\tMost likely because stacks it depends on haven't been created yet."
+                )
             else:
                 self.logger.info("Stack %s would be created with following parameter values: %s" % (stack.cf_stack_name, stack.get_params_tuples()))
                 self.logger.info("Stack %s already exists in CF: %s" % (stack.cf_stack_name, bool(stack.exists_in_cf(self.cf_desc_stacks))))
 
-    def create(self, stack_name = None):
+    def create(self, stack_name=None):
         """
         Create all stacks in the yaml file. Any that already exist are skipped (no attempt to update)
         """
@@ -180,7 +185,7 @@ class MegaStack:
                 self.logger.info("Finished creating stack: %s" % stack.cf_stack_name)
                 self.cf_desc_stacks = self.cfconn.describe_stacks()
 
-    def delete(self, stack_name = None):
+    def delete(self, stack_name=None):
         """
         Delete all the stacks from cloudformation.
         Does this in reverse dependency order. Prompts for confirmation before deleting each stack
@@ -208,7 +213,7 @@ class MegaStack:
                 self.logger.info("Finished deleting stack: %s" % stack.cf_stack_name)
                 self.cf_desc_stacks = self.cfconn.describe_stacks()
 
-    def update(self, stack_name = None):
+    def update(self, stack_name=None):
         """
         Attempts to update each of the stacks if template or parameters are diffenet to whats currently in cloudformation
         If a stack doesn't already exist. Logs critical error and exits.
@@ -238,16 +243,16 @@ class MegaStack:
                     #Would like to get this working. Tried datadiff at the moment but can't stop it from printing whole template
                     #stack.print_template_diff(self.cf_desc_stacks)
                 self.logger.info("Starting update of stack %s with parameters: %s" % (stack.name, stack.get_params_tuples()))
-                self.cfconn.validate_template(template_body = stack.template_body)
-                    
+                self.cfconn.validate_template(template_body=stack.template_body)
+
                 try:
                     self.cfconn.update_stack(
-                            stack_name    = stack.cf_stack_name,
-                            template_body = stack.template_body,
-                            parameters    = stack.get_params_tuples(),
-                            capabilities  = ['CAPABILITY_IAM'],
-                            tags          = stack.tags
-                            )
+                        stack_name=stack.cf_stack_name,
+                        template_body=stack.template_body,
+                        parameters=stack.get_params_tuples(),
+                        capabilities=['CAPABILITY_IAM'],
+                        tags=stack.tags,
+                    )
                 except boto.exception.BotoServerError as e:
                     try:
                         e_message_dict = simplejson.loads(e.error_message)
@@ -292,7 +297,6 @@ class MegaStack:
         self.logger.info("Watching stack %s, while in state %s." % (the_stack.cf_stack_name, str(the_cf_stack.stack_status)))
         self.watch_events(the_stack.cf_stack_name, str(the_cf_stack.stack_status))
 
-
     def watch_events(self, stack_name, while_status):
         """
         Used by the various actions to watch cloudformation events while a stacks in a given state
@@ -328,5 +332,3 @@ class MegaStack:
             status = str(cfstack_obj.stack_status)
             time.sleep(5)
         return status
-
-
