@@ -5,6 +5,14 @@ Helps manage AWS CloudFormation stacks
 
 News
 ----------------------------------
+### 2014-07-01
++ Added colour cloudformation event status output via 'highlight-output' setting in YAML
+   ```
+   highlight-output: true
+   ``` 
+
+News
+----------------------------------
 ### 2014-04-17
 + You can now insert PyStache {{}} style variables to import environment variables.
    ```
