@@ -6,7 +6,8 @@ Helps manage AWS CloudFormation stacks
 News
 ----------------------------------
 ### 2014-07-01
-+ Added colour cloudformation event status output via 'highlight-output' setting in YAML
++ Added colour cloudformation event status output via 'highlight-output' setting in YAML.
+
    ```
    highlight-output: true
    ``` 
