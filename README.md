@@ -12,8 +12,6 @@ News
    highlight-output: true
    ``` 
 
-News
-----------------------------------
 ### 2014-04-17
 + You can now insert PyStache {{}} style variables to import environment variables.
    ```
@@ -26,8 +24,6 @@ News
 
    would be seen by cloudformation with the ami id of ami-1q23123123
 
-News
-----------------------------------
 ### 2013-09-06
 + You can now define stack level tags using the _tags_ directive in the YaML file, like:
 
