@@ -255,7 +255,7 @@ class MegaStack:
                     )
                 except boto.exception.BotoServerError as e:
                     try:
-                        e_message_dict = simplejson.loads(e.error_message)
+                        e_message_dict = simplejson.loads(e[2])
                         if str(e_message_dict["Error"]["Message"]) == "No updates are to be performed.":
                             self.logger.error("Cloudformation has no updates to perform on %s, this might be because there is a parameter with NoEcho set" % stack.name)
                             continue
