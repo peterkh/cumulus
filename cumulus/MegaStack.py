@@ -13,24 +13,24 @@ class MegaStack:
     """
     Main workder class for cumulus. Holds array of CFstack objects and does most of the calls to cloudformation API
     """
-    def __init__(self, yamlFile):
+    def __init__(self, yaml_file):
         self.logger = logging.getLogger(__name__)
 
-        #load the yaml file and turn it into a dict
-        thefile = open(yamlFile, 'r')
+        # load the yaml file and turn it into a dict
+        thefile = open(yaml_file, 'r')
 
-        renderedFile = pystache.render(thefile.read(), dict(os.environ))
+        rendered_file = pystache.render(thefile.read(), dict(os.environ))
 
-        self.stackDict = yaml.safe_load(renderedFile)
-        #Make sure there is only one top level element in the yaml file
+        self.stackDict = yaml.safe_load(rendered_file)
+        # Make sure there is only one top level element in the yaml file
         if len(self.stackDict.keys()) != 1:
             self.logger.critical("Need one and only one mega stack name at the top level, found %s" % len(self.stackDict.keys()))
             exit(1)
 
-        #How we know we only have one top element, that must be the mega stack name
+        # How we know we only have one top element, that must be the mega stack name
         self.name = self.stackDict.keys()[0]
 
-        #Find and set the mega stacks region. Exit if we can't find it
+        # Find and set the mega stacks region. Exit if we can't find it
         if 'region' in self.stackDict[self.name]:
             self.region = self.stackDict[self.name]['region']
         else:
@@ -46,14 +46,14 @@ class MegaStack:
                 exit(1)
 
         self.global_tags = self.stackDict[self.name].get('tags', {})
-        #Array for holding CFStack objects once we create them
+        # Array for holding CFStack objects once we create them
         self.stack_objs = []
 
-        #Get the names of the sub stacks from the yaml file and sort in array
+        # Get the names of the sub stacks from the yaml file and sort in array
         self.cf_stacks = self.stackDict[self.name]['stacks'].keys()
 
-        #Megastack holds the connection to cloudformation and list of stacks currently in our region
-        #Stops us making lots of calls to cloudformation API for each stack
+        # Megastack holds the connection to cloudformation and list of stacks currently in our region
+        # Stops us making lots of calls to cloudformation API for each stack
         try:
             self.cfconn = cloudformation.connect_to_region(self.region)
             self.cf_desc_stacks = self.cfconn.describe_stacks()
@@ -61,7 +61,7 @@ class MegaStack:
             self.logger.critical("No credentials found for connecting to cloudformation: %s" % e)
             exit(1)
 
-        #iterate through the stacks in the yaml file and create CFstack objects for them
+        # iterate through the stacks in the yaml file and create CFstack objects for them
         for stack_name in self.cf_stacks:
             the_stack = self.stackDict[self.name]['stacks'][stack_name]
             if type(the_stack) is dict:
@@ -100,13 +100,13 @@ class MegaStack:
         sorted_stacks = []
         dep_graph = {}
         no_deps = []
-        #Add all stacks without dependancies to no_deps
+        # Add all stacks without dependancies to no_deps
         for stack in self.stack_objs:
             if stack.depends_on is None:
                 no_deps.append(stack)
             else:
                 dep_graph[stack.name] = stack.depends_on[:]
-        #Perform a topological sort on stacks in dep_graph
+        # Perform a topological sort on stacks in dep_graph
         while len(no_deps) > 0:
             stack = no_deps.pop()
             sorted_stacks.append(stack)
@@ -181,7 +181,7 @@ class MegaStack:
                     self.logger.critical("Stack didn't create correctly, status is now %s" % create_result)
                     exit(1)
 
-                #CF told us stack completed ok. Log message to that effect and refresh the list of stack objects in CF
+                # CF told us stack completed ok. Log message to that effect and refresh the list of stack objects in CF
                 self.logger.info("Finished creating stack: %s" % stack.cf_stack_name)
                 self.cf_desc_stacks = self.cfconn.describe_stacks()
 
@@ -190,7 +190,7 @@ class MegaStack:
         Delete all the stacks from cloudformation.
         Does this in reverse dependency order. Prompts for confirmation before deleting each stack
         """
-        #Removing stacks so need to do it in reverse dependancy order
+        # Removing stacks so need to do it in reverse dependancy order
         for stack in reversed(self.stack_objs):
             if stack_name and stack.name != stack_name:
                 continue
@@ -209,7 +209,7 @@ class MegaStack:
                     self.logger.critical("Stack didn't delete correctly, status is now %s" % delete_result)
                     exit(1)
 
-                #CF told us stack completed ok. Log message to that effect and refresh the list of stack objects in CF
+                # CF told us stack completed ok. Log message to that effect and refresh the list of stack objects in CF
                 self.logger.info("Finished deleting stack: %s" % stack.cf_stack_name)
                 self.cf_desc_stacks = self.cfconn.describe_stacks()
 
@@ -240,8 +240,8 @@ class MegaStack:
             else:
                 if not template_up_to_date:
                     self.logger.info("Template for stack %s has changed." % stack.name)
-                    #Would like to get this working. Tried datadiff at the moment but can't stop it from printing whole template
-                    #stack.print_template_diff(self.cf_desc_stacks)
+                    # Would like to get this working. Tried datadiff at the moment but can't stop it from printing whole template
+                    # stack.print_template_diff(self.cf_desc_stacks)
                 self.logger.info("Starting update of stack %s with parameters: %s" % (stack.name, stack.get_params_tuples()))
                 self.cfconn.validate_template(template_body=stack.template_body)
 
@@ -272,7 +272,7 @@ class MegaStack:
 
                 self.logger.info("Finished updating stack: %s" % stack.cf_stack_name)
 
-            #avoid getting rate limited
+            # avoid getting rate limited
             time.sleep(2)
 
     def watch(self, stack_name):
@@ -327,7 +327,7 @@ class MegaStack:
             'UPDATE_ROLLBACK_COMPLETE': '\033[1;32m',
             'UPDATE_FAILED': '\033[1;31m',
         }
-        #print the last 5 events, so we get to see the start of the action we are performing
+        # print the last 5 events, so we get to see the start of the action we are performing
         self.logger.info("Last 5 events for this stack:")
         for event in reversed(events[:5]):
             if self.stackDict[self.name].get('highlight-output', True):

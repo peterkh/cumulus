@@ -2,8 +2,9 @@ import logging
 import simplejson
 from boto import cloudformation
 
+
 class CFStack:
-    def __init__(self, mega_stack_name, name, params, template_name, region, sns_topic_arn, tags = None, depends_on = None):
+    def __init__(self, mega_stack_name, name, params, template_name, region, sns_topic_arn, tags=None, depends_on=None):
         self.logger = logging.getLogger(__name__)
         if mega_stack_name == name:
             self.cf_stack_name = name
@@ -26,8 +27,8 @@ class CFStack:
                     self.depends_on.append("%s-%s" % (mega_stack_name, dep))
         self.region = region
         self.sns_topic_arn = sns_topic_arn
-        
-        #Safer than setting default value for tags = {}
+
+        # Safer than setting default value for tags = {}
         if tags is None:
             self.tags = {}
         else:
@@ -38,7 +39,7 @@ class CFStack:
         except:
             self.logger.critical("Failed to open template file %s for stack %s" % (self.template_name, self.name))
             exit(1)
-        if not ( type(self.yaml_params) is dict or self.yaml_params is None ):
+        if not (type(self.yaml_params) is dict or self.yaml_params is None):
             self.logger.critical("Parameters for stack %s must be of type dict not %s" % (self.name, type(self.yaml_params)))
             exit(1)
 
@@ -51,7 +52,7 @@ class CFStack:
         else:
             for dep in self.depends_on:
                 dep_met = False
-                #check CF if stack we depend on has been created successfully
+                # check CF if stack we depend on has been created successfully
                 for stack in current_cf_stacks:
                     if str(stack.stack_name) == dep:
                         dep_met = True
@@ -66,18 +67,18 @@ class CFStack:
         return False
 
     def populate_params(self, current_cf_stacks):
-        #If we have no parameters in the yaml file, set params to an empty dict and return true
+        # If we have no parameters in the yaml file, set params to an empty dict and return true
         if self.yaml_params is None:
             self.params = {}
             return True
         if self.deps_met(current_cf_stacks):
             for param in self.yaml_params.keys():
                 if type(self.yaml_params[param]) is dict:
-                    #Static value set, so use it
-                    if self.yaml_params[param].has_key('value'):
+                    # Static value set, so use it
+                    if 'value' in self.yaml_params[param]:
                         self.params[param] = str(self.yaml_params[param]['value'])
-                    #No static value set, but if we have a source, type and variable can try getting from CF
-                    elif self.yaml_params[param].has_key('source') and self.yaml_params[param].has_key('type') and self.yaml_params[param].has_key('variable'):
+                    # No static value set, but if we have a source, type and variable can try getting from CF
+                    elif 'source' in self.yaml_params[param] and 'type' in self.yaml_params[param] and 'variable' in self.yaml_params[param]:
                         if self.yaml_params[param]['source'] == self.mega_stack_name:
                             source_stack = self.yaml_params[param]['source']
                         elif self.yaml_params[param]['source'][:1] == '-':
@@ -85,51 +86,51 @@ class CFStack:
                         else:
                             source_stack = "%s-%s" % (self.mega_stack_name, self.yaml_params[param]['source'])
                         self.params[param] = self.get_value_from_cf(
-                                source_stack = source_stack,
-                                var_type = self.yaml_params[param]['type'],
-                                var_name = self.yaml_params[param]['variable']
-                                )
-                #If self.yaml_params[param] is a list it means there is an array of vars we need to turn into a comma sep list.
+                            source_stack=source_stack,
+                            var_type=self.yaml_params[param]['type'],
+                            var_name=self.yaml_params[param]['variable'],
+                        )
+                # If self.yaml_params[param] is a list it means there is an array of vars we need to turn into a comma sep list.
                 elif type(self.yaml_params[param]) is list:
                     param_list = []
                     for item in self.yaml_params[param]:
                         if type(item) is dict:
-                            #Static value set, so use it
-                            if item.has_key('value'):
+                            # Static value set, so use it
+                            if 'value' in item:
                                 param_list.append(str(item['value']))
-                            #No static value set, but if we have a source, type and variable can try getting from CF
-                            elif item.has_key('source') and item.has_key('type') and item.has_key('variable'):
+                            # No static value set, but if we have a source, type and variable can try getting from CF
+                            elif 'source' in item and 'type' in item and 'variable' in item:
                                 if item['source'] == self.mega_stack_name:
                                     source_stack = item['source']
                                 else:
                                     source_stack = "%s-%s" % (self.mega_stack_name, item['source'])
                                 param_list.append(self.get_value_from_cf(
-                                    source_stack = source_stack,
-                                    var_type = item['type'],
-                                    var_name = item['variable']
-                                    ))
+                                    source_stack=source_stack,
+                                    var_type=item['type'],
+                                    var_name=item['variable'],
+                                ))
                             else:
-                                print "Error in yaml file, %s in parameter list for %s stack. Can't populate." % (self.yaml_params[param],self.name)
+                                print "Error in yaml file, %s in parameter list for %s stack. Can't populate." % (self.yaml_params[param], self.name)
                                 exit(1)
                     self.params[param] = ','.join(param_list)
             return True
         else:
             return False
 
-    def get_cf_stack(self, stack, resources = False):
+    def get_cf_stack(self, stack, resources=False):
         """
         Get information on parameters, outputs and resources from a stack and cache it
         """
         if not resources:
-            if not self.cf_stacks.has_key(stack):
-                #We don't have this stack in the cache already so we need to pull it from CF
+            if stack not in self.cf_stacks:
+                # We don't have this stack in the cache already so we need to pull it from CF
                 cfconn = cloudformation.connect_to_region(self.region)
                 self.cf_stacks[stack] = cfconn.describe_stacks(stack)[0]
             return self.cf_stacks[stack]
         else:
-            if not self.cf_stacks_resources.has_key(stack):
+            if stack not in self.cf_stacks_resources:
                 cfconn = cloudformation.connect_to_region(self.region)
-                the_stack = self.get_cf_stack(stack = stack, resources = False)
+                the_stack = self.get_cf_stack(stack=stack, resources=False)
                 self.cf_stacks_resources[stack] = the_stack.list_resources()
             return self.cf_stacks_resources[stack]
 
@@ -138,7 +139,7 @@ class CFStack:
         Get a variable from a existing cloudformation stack, var_type should be parameter, resource or output.
         If using resource, provide the logical ID and this will return the Physical ID
         """
-        the_stack = self.get_cf_stack(stack = source_stack)
+        the_stack = self.get_cf_stack(stack=source_stack)
         if var_type == 'parameter':
             for p in the_stack.parameters:
                 if str(p.key) == var_name:
@@ -148,14 +149,12 @@ class CFStack:
                 if str(o.key) == var_name:
                     return str(o.value)
         elif var_type == 'resource':
-            for r in self.get_cf_stack(stack = source_stack, resources = True):
+            for r in self.get_cf_stack(stack=source_stack, resources=True):
                 if str(r.logical_resource_id) == var_name:
                     return str(r.physical_resource_id)
         else:
             print "Error: invalid var_type passed to get_value_from_cf, needs to be parameter, resource or output. Not: %s" % (var_type)
             exit(1)
-
-
 
     def get_params_tuples(self):
         tuple_list = []
@@ -173,7 +172,6 @@ class CFStack:
             exit(1)
         self.template_body = simplejson.dumps(template)
         return True
-
 
     def template_uptodate(self, current_cf_stacks):
         """
@@ -197,23 +195,21 @@ class CFStack:
         if not cf_stack:
             return False
 
-        #If number of params in CF and this stack obj dont match, then it needs updating
+        # If number of params in CF and this stack obj dont match, then it needs updating
         if len(cf_stack.parameters) != len(self.params):
             self.logger.debug("New and old parameter lists are different lengths for %s" % (self.name))
             return False
 
         for param in cf_stack.parameters:
-            #check if param in CF exists in our new parameter set,
-            #if not they are differenet and need updating
-            if not self.params.has_key(str(param.key)):
+            # check if param in CF exists in our new parameter set,
+            # if not they are differenet and need updating
+            if str(param.key) not in self.params:
                 self.logger.debug("New params are missing key %s that exists in CF for %s stack already." % (str(param.key), self.name))
                 return False
-            #if the value of parameters are different, needs updating
+            # if the value of parameters are different, needs updating
             if self.params[str(param.key)] != str(param.value):
                 self.logger.debug("Param %s for stack %s has changed from %s to %s" % (str(param.key), self.name, str(param.value), self.params[str(param.key)]))
                 return False
 
-        #We got to the end without returning False, so must be fine.
+        # We got to the end without returning False, so must be fine.
         return True
-
-
