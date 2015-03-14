@@ -56,7 +56,7 @@ class MegaStack:
         #Stops us making lots of calls to cloudformation API for each stack
         try:
             self.cfconn = cloudformation.connect_to_region(self.region)
-            self.cf_desc_stacks = self.cfconn.describe_stacks()
+            self.cf_desc_stacks = self._describe_all_stacks()
         except boto.exception.NoAuthHandlerFound as e:
             self.logger.critical("No credentials found for connecting to cloudformation: %s" % e)
             exit(1)
@@ -183,7 +183,7 @@ class MegaStack:
 
                 #CF told us stack completed ok. Log message to that effect and refresh the list of stack objects in CF
                 self.logger.info("Finished creating stack: %s" % stack.cf_stack_name)
-                self.cf_desc_stacks = self.cfconn.describe_stacks()
+                self.cf_desc_stacks = self._describe_all_stacks()
 
     def delete(self, stack_name=None):
         """
@@ -211,7 +211,7 @@ class MegaStack:
 
                 #CF told us stack completed ok. Log message to that effect and refresh the list of stack objects in CF
                 self.logger.info("Finished deleting stack: %s" % stack.cf_stack_name)
-                self.cf_desc_stacks = self.cfconn.describe_stacks()
+                self.cf_desc_stacks = self._describe_all_stacks()
 
     def update(self, stack_name=None):
         """
@@ -388,3 +388,12 @@ class MegaStack:
             status = str(cfstack_obj.stack_status)
             time.sleep(5)
         return status
+
+    def _describe_all_stacks(self):
+        result = []
+        resp = self.cfconn.describe_stacks()
+        result.extend(resp)
+        while resp.next_token:
+            resp = self.cfconn.describe_stacks(next_token=resp.next_token)
+            result.extend(resp)
+        return result
