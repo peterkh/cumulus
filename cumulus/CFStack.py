@@ -1,8 +1,15 @@
+"""
+CFStack module. Manages a single CloudFormation stack.
+"""
 import logging
 import simplejson
 from boto import cloudformation
 
 class CFStack(object):
+    """
+    CFstack object represents a CloudFormation stack including its parameters,
+    region, template and what other stacks it depends on.
+    """
     def __init__(self, mega_stack_name, name, params, template_name, region,
         sns_topic_arn, tags=None, depends_on=None):
         self.logger = logging.getLogger(__name__)
@@ -52,6 +59,9 @@ class CFStack(object):
         self.cf_stacks_resources = {}
 
     def deps_met(self, current_cf_stacks):
+        """
+        Check whether stacks we depend on exist in CloudFormation
+        """
         if self.depends_on is None:
             return True
         else:
@@ -66,12 +76,18 @@ class CFStack(object):
             return True
 
     def exists_in_cf(self, current_cf_stacks):
+        """
+        Check if this stack exists in CloudFormation
+        """
         for stack in current_cf_stacks:
             if str(stack.stack_name) == self.cf_stack_name:
                 return stack
         return False
 
     def populate_params(self, current_cf_stacks):
+        """
+        Populate the parameter list for this stack
+        """
         #If we have no parameters in the yaml file,
         #set params to an empty dict and return true
         if self.yaml_params is None:
@@ -169,8 +185,10 @@ class CFStack(object):
             exit(1)
 
 
-
     def get_params_tuples(self):
+        """
+        Convert param dict to array of tuples needed by boto
+        """
         tuple_list = []
         if len(self.params) > 0:
             for param in self.params.keys():
@@ -178,6 +196,9 @@ class CFStack(object):
         return tuple_list
 
     def read_template(self):
+        """
+        Open and parse the json template for this stack
+        """
         try:
             template_file = open(self.template_name, 'r')
             template = simplejson.load(template_file)
@@ -238,5 +259,3 @@ class CFStack(object):
 
         #We got to the end without returning False, so must be fine.
         return True
-
-

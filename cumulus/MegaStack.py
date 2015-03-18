@@ -1,3 +1,7 @@
+"""
+Megastack module represents a logical mega stack that contains CloudFormation
+stacks and the relationship between them
+"""
 import boto
 import logging
 import simplejson
