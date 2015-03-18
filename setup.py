@@ -7,7 +7,7 @@ from glob import glob
 
 setup(
         name = "cumulus",
-        version = "0.2a5",
+        version = "0.3a0",
         author = "Peter Hall",
         author_email= 'peter.hall@catchoftheday.com.au',
         license='Apache Software License 2.0',
