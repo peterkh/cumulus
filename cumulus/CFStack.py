@@ -5,13 +5,14 @@ import logging
 import simplejson
 from boto import cloudformation
 
+
 class CFStack(object):
     """
     CFstack object represents a CloudFormation stack including its parameters,
     region, template and what other stacks it depends on.
     """
     def __init__(self, mega_stack_name, name, params, template_name, region,
-        sns_topic_arn, tags=None, depends_on=None):
+                 sns_topic_arn, tags=None, depends_on=None):
         self.logger = logging.getLogger(__name__)
         if mega_stack_name == name:
             self.cf_stack_name = name
@@ -35,7 +36,7 @@ class CFStack(object):
         self.region = region
         self.sns_topic_arn = sns_topic_arn
 
-        #Safer than setting default value for tags = {}
+        # Safer than setting default value for tags = {}
         if tags is None:
             self.tags = {}
         else:
@@ -45,10 +46,10 @@ class CFStack(object):
             open(template_name, 'r')
         except:
             self.logger.critical("Failed to open template file %s for stack %s"
-                % (self.template_name, self.name))
+                                 % (self.template_name, self.name))
             exit(1)
 
-        #check params is a dict if set
+        # check params is a dict if set
         if self.yaml_params and type(self.yaml_params) is not dict:
             self.logger.critical(
                 "Parameters for stack %s must be of type dict not %s",
@@ -67,7 +68,7 @@ class CFStack(object):
         else:
             for dep in self.depends_on:
                 dep_met = False
-                #check CF if stack we depend on has been created successfully
+                # check CF if stack we depend on has been created successfully
                 for stack in current_cf_stacks:
                     if str(stack.stack_name) == dep:
                         dep_met = True
@@ -88,8 +89,8 @@ class CFStack(object):
         """
         Populate the parameter list for this stack
         """
-        #If we have no parameters in the yaml file,
-        #set params to an empty dict and return true
+        # If we have no parameters in the yaml file,
+        # set params to an empty dict and return true
         if self.yaml_params is None:
             self.params = {}
             return True
@@ -98,7 +99,7 @@ class CFStack(object):
                 if type(param_val) is dict:
                     self.params[param_name] = self._parse_param(
                         param_name, param_val)
-                #If param_val is a list it means there is an array of vars
+                # If param_val is a list it means there is an array of vars
                 # we need to turn into a comma sep list.
                 elif type(param_val) is list:
                     param_list = []
@@ -115,26 +116,26 @@ class CFStack(object):
         """
         Parse a param dict and return var value or false if not valid
         """
-        #Static value set, so use it
-        if param_dict.has_key('value'):
+        # Static value set, so use it
+        if 'value' in param_dict:
             return str(param_dict['value'])
-        #No static value set, but if we have a source,
+        # No static value set, but if we have a source,
         # type and variable can try getting from CF
-        elif (param_dict.has_key('source')
-            and param_dict.has_key('type')
-            and param_dict.has_key('variable')):
+        elif ('source' in param_dict
+              and 'type' in param_dict
+              and 'variable' in param_dict):
             if param_dict['source'] == self.mega_stack_name:
                 source_stack = param_dict['source']
             else:
                 source_stack = ("%s-%s" %
-                    (self.mega_stack_name, param_dict['source']))
+                                (self.mega_stack_name, param_dict['source']))
             return self.get_value_from_cf(
                 source_stack=source_stack,
                 var_type=param_dict['type'],
                 var_name=param_dict['variable'])
         else:
             error_message = ("Error in yaml file, can't parse parameter %s"
-                            + "for %s stack.")
+                             + "for %s stack.")
             self.logger.critical(error_message, param_name, self.name)
             exit(1)
 
@@ -144,14 +145,14 @@ class CFStack(object):
         and cache it
         """
         if not resources:
-            if not self.cf_stacks.has_key(stack):
-                #We don't have this stack in the cache already
+            if stack not in self.cf_stacks:
+                # We don't have this stack in the cache already
                 # so we need to pull it from CF
                 cfconn = cloudformation.connect_to_region(self.region)
                 self.cf_stacks[stack] = cfconn.describe_stacks(stack)[0]
             return self.cf_stacks[stack]
         else:
-            if not self.cf_stacks_resources.has_key(stack):
+            if stack not in self.cf_stacks_resources:
                 cfconn = cloudformation.connect_to_region(self.region)
                 the_stack = self.get_cf_stack(stack=stack, resources=False)
                 self.cf_stacks_resources[stack] = the_stack.list_resources()
@@ -179,11 +180,10 @@ class CFStack(object):
                     return str(res.physical_resource_id)
         else:
             error_message = ("Error: invalid var_type passed to" +
-                " get_value_from_cf, needs to be parameter, resource " +
-                "or output. Not: %s")
+                             " get_value_from_cf, needs to be parameter, " +
+                             "resource or output. Not: %s")
             self.logger.critical(error_message, (var_type))
             exit(1)
-
 
     def get_params_tuples(self):
         """
@@ -204,11 +204,11 @@ class CFStack(object):
             template = simplejson.load(template_file)
         except Exception as exception:
             self.logger.critical("Cannot parse %s template for stack %s."
-                " Error: %s", self.template_name, self.name, exception)
+                                 " Error: %s", self.template_name, self.name,
+                                 exception)
             exit(1)
         self.template_body = simplejson.dumps(template)
         return True
-
 
     def template_uptodate(self, current_cf_stacks):
         """
@@ -233,7 +233,7 @@ class CFStack(object):
         if not cf_stack:
             return False
 
-        #If number of params in CF and this stack obj dont match,
+        # If number of params in CF and this stack obj dont match,
         # then it needs updating
         if len(cf_stack.parameters) != len(self.params):
             msg = "New and old parameter lists are different lengths for %s"
@@ -241,21 +241,21 @@ class CFStack(object):
             return False
 
         for param in cf_stack.parameters:
-            #check if param in CF exists in our new parameter set,
-            #if not they are differenet and need updating
+            # check if param in CF exists in our new parameter set,
+            # if not they are differenet and need updating
             key = param.key
             value = param.value
-            if not self.params.has_key(key):
+            if key not in self.params:
                 msg = ("New params are missing key %s that exists in CF for %s"
-                    + " stack already.")
+                       + " stack already.")
                 self.logger.debug(msg, key, self.name)
                 return False
-            #if the value of parameters are different, needs updating
+            # if the value of parameters are different, needs updating
             if self.params[key] != value:
                 msg = "Param %s for stack %s has changed from %s to %s"
                 self.logger.debug(msg, key, self.name,
-                    value, self.params[key])
+                                  value, self.params[key])
                 return False
 
-        #We got to the end without returning False, so must be fine.
+        # We got to the end without returning False, so must be fine.
         return True
