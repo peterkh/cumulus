@@ -247,7 +247,7 @@ class MegaStack(object):
                     "Confirm you wish to delete stack %s (Name in CF: %s)"
                     " (type 'yes' if so): " % (stack.name, stack.cf_stack_name))
                 if not confirm == "yes":
-                    print "Not confirmed, skipping..."
+                    self.logger.info("Not confirmed, skipping...")
                     continue
                 self.logger.info("Starting delete of stack %s" % stack.name)
                 self.cfconn.delete_stack(stack.cf_stack_name)

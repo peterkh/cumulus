@@ -203,8 +203,8 @@ class CFStack(object):
             template_file = open(self.template_name, 'r')
             template = simplejson.load(template_file)
         except Exception as exception:
-            print ("Cannot parse %s template for stack %s. Error: %s"
-                % (self.template_name, self.name, exception))
+            self.logger.critical("Cannot parse %s template for stack %s."
+                " Error: %s", self.template_name, self.name, exception)
             exit(1)
         self.template_body = simplejson.dumps(template)
         return True
