@@ -207,7 +207,12 @@ class CFStack(object):
                                  " Error: %s", self.template_name, self.name,
                                  exception)
             exit(1)
-        self.template_body = simplejson.dumps(template)
+        self.template_body = simplejson.dumps(
+            template,
+            sort_keys=True,
+            indent=2,
+            separators=(',', ': '),
+        )
         return True
 
     def template_uptodate(self, current_cf_stacks):
