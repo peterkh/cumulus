@@ -1,0 +1,4 @@
+test:
+  override:
+    - pip install flake8
+    - flake8 bin/cumulus .

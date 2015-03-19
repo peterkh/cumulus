@@ -16,7 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License."""
 
 import sys
-from os.path import dirname, join, abspath
+from os.path import dirname, abspath
 
 # Add one directory up to python path, so it can find cumulus package
 BIN_DIR = dirname(abspath(__file__))
