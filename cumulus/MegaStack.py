@@ -308,24 +308,33 @@ class MegaStack:
             if str(e.error_message) == "Stack:%s does not exist" % (stack_name):
                 return "STACK_GONE"
 
+        colors = {
+            'blue': '\033[0;34m',
+            'red': '\033[0;31m',
+            'bred': '\033[1;31m',
+            'green': '\033[0;32m',
+            'bgreen': '\033[1;32m',
+            'yellow': '\033[0;33m',
+        }
+
         status_color_map = {
-            'CREATE_IN_PROGRESS': '\033[1;33m',
-            'CREATE_FAILED': '\033[1;31m',
-            'CREATE_COMPLETE': '\033[1;32m',
-            'ROLLBACK_IN_PROGRESS': '\033[1;33m',
-            'ROLLBACK_FAILED': '\033[1;31m',
-            'ROLLBACK_COMPLETE': '\033[1;30m',
-            'DELETE_IN_PROGRESS': '\033[1;33m',
-            'DELETE_FAILED': '\033[1;31m',
-            'DELETE_COMPLETE': '\033[1;30m',
-            'UPDATE_IN_PROGRESS': '\033[1;33m',
-            'UPDATE_COMPLETE_CLEANUP_IN_PROGRESS': '\033[1;33m',
-            'UPDATE_COMPLETE': '\033[1;32m',
-            'UPDATE_ROLLBACK_IN_PROGRESS': '\033[1;33m',
-            'UPDATE_ROLLBACK_FAILED': '\033[1;31m',
-            'UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS': '\033[1;33m',
-            'UPDATE_ROLLBACK_COMPLETE': '\033[1;32m',
-            'UPDATE_FAILED': '\033[1;31m',
+            'CREATE_IN_PROGRESS': colors['blue'],
+            'CREATE_FAILED': colors['bred'],
+            'CREATE_COMPLETE': colors['green'],
+            'ROLLBACK_IN_PROGRESS': colors['red'],
+            'ROLLBACK_FAILED': colors['bred'],
+            'ROLLBACK_COMPLETE': colors['yellow'],
+            'DELETE_IN_PROGRESS': colors['red'],
+            'DELETE_FAILED': colors['bred'],
+            'DELETE_COMPLETE': colors['yellow'],
+            'UPDATE_IN_PROGRESS': colors['blue'],
+            'UPDATE_COMPLETE_CLEANUP_IN_PROGRESS': colors['blue'],
+            'UPDATE_COMPLETE': colors['bgreen'],
+            'UPDATE_ROLLBACK_IN_PROGRESS': colors['red'],
+            'UPDATE_ROLLBACK_FAILED': colors['bred'],
+            'UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS': colors['red'],
+            'UPDATE_ROLLBACK_COMPLETE': colors['yellow'],
+            'UPDATE_FAILED': colors['bred'],
         }
         #print the last 5 events, so we get to see the start of the action we are performing
         self.logger.info("Last 5 events for this stack:")
