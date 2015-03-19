@@ -10,7 +10,7 @@ News
 
    ```
    highlight-output: true
-   ``` 
+   ```
 
 ### 2014-04-17
 + You can now insert PyStache {{}} style variables to import environment variables.
