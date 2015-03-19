@@ -10,7 +10,7 @@ News
 
    ```
    highlight-output: true
-   ``` 
+   ```
 
 ### 2014-04-17
 + You can now insert PyStache {{}} style variables to import environment variables.
@@ -55,7 +55,6 @@ This is my first real python project, so I'm sure the code can be, just generall
 Known issues:
 
 * Templates are passed in as a JSON string to CF, this will break large templates
-* Cumulus generated stacks display as one liners in the CF console
 
 Roadmap:
 
