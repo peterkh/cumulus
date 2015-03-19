@@ -3,6 +3,10 @@ Cumulus
 
 Helps manage AWS CloudFormation stacks
 
+Build status
+----------------------------------
+[![Circle CI](https://circleci.com/gh/cotdsa/cumulus/tree/master.svg?style=svg)](https://circleci.com/gh/cotdsa/cumulus/tree/master)
+
 News
 ----------------------------------
 ### 2014-07-01
