@@ -1,6 +1,6 @@
-#Basic example of what cumulus can do. The following takes two simple cloudformation template files and creates a VPC with a instance running in it.
+# Basic example of what cumulus can do. The following takes two simple cloudformation template files and creates a VPC with a instance running in it.
 
-#Overall stack name. All stacks in CF get prefixed with this name.
+# Overall stack name. All stacks in CF get prefixed with this name.
 example-stack:
     # Optional SNS ARN to receive notification about the sub-stacks
 #   sns-topic-arn: arn:aws:sns:region:account:topic
@@ -8,41 +8,41 @@ example-stack:
 #   sns-topic-arn:
 #       - arn:aws:sns:region:account:topic1
 #       - arn:aws:sns:region:account:topic2
-    #The region Cumulus will create the stack in 
+    # The region Cumulus will create the stack in
     region: us-west-2
-    #Turn on colour cloudformation event status output
+    # Turn on colour cloudformation event status output
     highlight-output: true
     stacks:
-        #Base stack, has the same name as the top level. Cumulus knows not to call it examplestack-example-stack.
-        #This template has no parameters to pass in
+        # Base stack, has the same name as the top level. Cumulus knows not to call it examplestack-example-stack.
+        # This template has no parameters to pass in
         example-stack:
             cf_template: vpc_layer.json
             #No dependencies on this stack. Still include the empty depends variable
             depends:
             params:
-        #A simple stack that launches a instance inside our VPC above
-        #This stack will show up in CF as example-stack-instance.
+        # A simple stack that launches a instance inside our VPC above
+        # This stack will show up in CF as example-stack-instance.
         instance:
             cf_template: instance_layer.json
             # You can optionally override the global SNS topic by specifying it in the substack
 #           sns-topic-arn: arn:aws:sns:region:account:topic3
-            #One dependency for this stack, no reason a stack can't depend on multiple other stacks. Just be careful about loops
-            #List dependencies for this stack, be careful when referring to multiple stacks to ensure you don't create a dependency loop
+            # One dependency for this stack, no reason a stack can't depend on multiple other stacks. Just be careful about loops
+            # List dependencies for this stack, be careful when referring to multiple stacks to ensure you don't create a dependency loop
             depends:
                 - example-stack
             params:
-                #Statically setting the values for SSHLocation, InstanceType and KeyNmae
+                # Statically setting the values for SSHLocation, InstanceType and KeyNmae
                 SSHLocation:
                     value: 0.0.0.0/0
                 InstanceType:
                     value: t1.micro
                 KeyName:
                     value: example
-                #This is where cumulus adds real value, dynamically get the value of the vpcId from example-stack
+                # This is where cumulus adds real value, dynamically get the value of the vpcId from example-stack
                 VPC:
-                    #source: which CF stack to look for the value
-                    #type: can me resource, parameter or output. Which type of variable are we looking for
-                    #variable: what is the logical ID of the resource or the name of the parmeter / output
+                    # source: which CF stack to look for the value
+                    # type: can me resource, parameter or output. Which type of variable are we looking for
+                    # variable: what is the logical ID of the resource or the name of the parmeter / output
                     source   : example-stack
                     type     : resource
                     variable : VPC
