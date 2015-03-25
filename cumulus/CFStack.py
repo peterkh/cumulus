@@ -135,7 +135,7 @@ class CFStack(object):
                 var_name=param_dict['variable'])
         else:
             error_message = ("Error in yaml file, can't parse parameter %s"
-                             + "for %s stack.")
+                             + " for %s stack.")
             self.logger.critical(error_message, param_name, self.name)
             exit(1)
 
