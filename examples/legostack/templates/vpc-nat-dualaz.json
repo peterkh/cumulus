@@ -1,0 +1,183 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Dual-AZ Template providing NAT instances and routes",
+  "Parameters": {
+    "ParamVPC": {
+      "Type": "AWS::EC2::VPC::Id",
+      "Description": "VPC ID"
+    },
+    "ParamVPCCDRBlock": {
+      "Type": "String",
+      "Description": "VPC CIDR Block",
+		  "AllowedPattern": "([0-9]{1,3}\\.){3}[0-9]{1,3}\/[0-9]{1,2}",
+		  "ConstraintDescription": "Parameter CIDRBlock must be a valid CIDR expression."
+    },
+    "ParamInstSubnet1": {
+      "Type": "AWS::EC2::Subnet::Id",
+      "Description": "Subnet for NAT Instance 1"
+    },
+    "ParamRouteTable1": {
+      "Type": "String",
+      "Description": "A route table to associate with the first NAT instance"
+    },
+    "ParamInstSubnet2": {
+      "Type": "AWS::EC2::Subnet::Id",
+      "Description": "Subnet for NAT instance 2"
+    },
+    "ParamRouteTable2": {
+      "Type": "String",
+      "Description": "A route table to associate with the second NAT instance"
+    },
+    "ParamRSAKeyName" : {
+      "Type": "String",
+      "Description": "RSA Key for instances"
+    },
+    "ParamIamInstanceProfile" : {
+      "Type": "String",
+      "Description": "IAM Instance Profile for instances"
+    },
+    "ParamInstanceDefaultSG": {
+      "Type": "AWS::EC2::SecurityGroup::Id",
+      "Description": "ID of Default Management SG"
+    }
+  },
+	"Mappings": {
+    "AWSNATAMI": {
+      "us-east-1": {
+        "AMI": "ami-c6699baf"
+      },
+      "us-west-2": {
+        "AMI": "ami-52ff7262"
+      },
+      "us-west-1": {
+        "AMI": "ami-3bcc9e7e"
+      },
+      "eu-west-1": {
+        "AMI": "ami-0b5b6c7f"
+      },
+      "ap-southeast-1": {
+        "AMI": "ami-02eb9350"
+      },
+      "ap-northeast-1": {
+        "AMI": "ami-14d86d15"
+      },
+      "sa-east-1": {
+        "AMI": "ami-0439e619"
+      },
+      "ap-southeast-2": {
+        "AMI": "ami-a1980f9b"
+      }
+    }
+	},
+  "Resources": {
+	  "NATSecurityGroup": {
+	    "Type": "AWS::EC2::SecurityGroup",
+	    "Properties": {
+	      "GroupDescription": "Enable internal access to the NAT device",
+	      "VpcId": { "Ref": "ParamVPC" },
+	      "SecurityGroupIngress": [
+	        {
+	          "IpProtocol": "-1",
+	          "CidrIp": { "Ref" : "ParamVPCCDRBlock" }
+	        }
+	      ]
+	    }
+	  },  
+    "NATDevice1": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": "m1.small",
+        "Monitoring": "true",
+        "KeyName": { "Ref": "ParamRSAKeyName" },
+        "IamInstanceProfile" : { "Ref" : "ParamIamInstanceProfile" },
+        "SubnetId": { "Ref" : "ParamInstSubnet1" },
+        "SecurityGroupIds" : [
+					{ "Ref" : "NATSecurityGroup" },
+          { "Ref" : "ParamInstanceDefaultSG" }
+        ],
+        "SourceDestCheck": "false",
+				"ImageId": { "Fn::FindInMap": ["AWSNATAMI", {"Ref": "AWS::Region"}, "AMI" ] },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "@",
+                [
+                  "NAT-L",
+                  {
+                    "Ref": "AWS::StackName"
+                  }
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "NATIPAddress1": {
+      "Type": "AWS::EC2::EIP",
+      "DependsOn": "NATDevice1",
+      "Properties": {
+        "Domain": "vpc",
+        "InstanceId": { "Ref" : "NATDevice1" }
+      }
+    },
+    "Route1": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": { "Ref": "ParamRouteTable1" },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "InstanceId" : { "Ref" : "NATDevice1" }
+      }
+    },
+    "NATDevice2": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": "m1.small",
+        "Monitoring": "true",
+        "KeyName": { "Ref": "ParamRSAKeyName" },
+        "IamInstanceProfile" : { "Ref" : "ParamIamInstanceProfile" },
+        "SubnetId": { "Ref" : "ParamInstSubnet2" },
+        "SecurityGroupIds" : [
+					{ "Ref" : "NATSecurityGroup" },
+          { "Ref" : "ParamInstanceDefaultSG" }
+        ],
+        "SourceDestCheck": "false",
+        "ImageId": { "Fn::FindInMap": ["AWSNATAMI", {"Ref": "AWS::Region"}, "AMI" ] },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "@",
+                [
+                  "NAT-R",
+                  {
+                    "Ref": "AWS::StackName"
+                  }
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "NATIPAddress2": {
+      "Type": "AWS::EC2::EIP",
+      "DependsOn": "NATDevice2",
+      "Properties": {
+        "Domain": "vpc",
+        "InstanceId": { "Ref" : "NATDevice2" }
+      }
+    },
+    "Route2": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": { "Ref": "ParamRouteTable2" },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "InstanceId" : { "Ref" : "NATDevice2" }
+      }
+    }
+  }
+}

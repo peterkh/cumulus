@@ -1,0 +1,101 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Single-AZ generic instance",
+  "Parameters": {
+    "ParamInstSubnet": {
+      "Type": "AWS::EC2::Subnet::Id",
+      "Description": "Subnet for instance"
+    },
+    "ParamVPC": {
+      "Type": "AWS::EC2::VPC::Id",
+      "Description": "VPC ID"
+    },
+    "ParamRSAKeyName" : {
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "Description": "RSA Key for instances"
+    },
+    "ParamIamInstanceProfile" : {
+      "Type": "String",
+      "Description": "IAM Role Profile for instances"
+    },
+    "ParamInstanceAMI" : {
+      "Type": "String",
+      "Description": "ID of instance AMI"
+    },
+    "ParamInstanceDefaultSG": {
+      "Type": "AWS::EC2::SecurityGroup::Id",
+      "Description": "ID of Default Management SG"
+    },
+    "ParamInstanceType" : {
+      "Type": "String",
+      "Default" : "c3.large",
+      "Description": "Instance type for newly created instances"
+    },
+    "ParamUseElasticIP": {
+      "Default": "false",
+      "Description": "Whether to create and assign an elastic ip to the instance",
+      "Type": "String",
+      "AllowedValues": [
+        "true",
+        "false"
+      ]
+    }
+  },
+  "Conditions" : {
+    "UseElasticIP" : {"Fn::Equals" : [{"Ref" : "ParamUseElasticIP"}, "true"]}
+  },
+  "Resources": {
+    "SGInstance": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security group for instance",
+        "VpcId": {
+          "Ref": "ParamVPC"
+        },
+        "SecurityGroupIngress": [
+        ]
+      }
+    },
+    "Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": { "Ref" : "ParamInstanceType" },
+        "IamInstanceProfile": {
+          "Ref": "ParamIamInstanceProfile"
+        },
+        "UserData": { "Fn::Base64": { "Fn::Join": [ "",
+              [
+                "#!/bin/bash\n"
+              ]
+        ] } },
+        "SubnetId": {
+          "Ref": "ParamInstSubnet"
+        },
+        "SourceDestCheck": "true",
+        "ImageId": {
+          "Ref" : "ParamInstanceAMI"
+        },
+        "KeyName": { "Ref": "ParamRSAKeyName" },
+        "SecurityGroupIds": [
+          { "Ref": "ParamInstanceDefaultSG" },
+          { "Ref": "SGInstance"}
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": { "Fn::Join": [ "@", [ "inst", { "Ref": "AWS::StackName" } ] ] }
+          }
+        ]
+      }
+    },
+    "InstIPAddress1": {
+      "Type": "AWS::EC2::EIP",
+      "DependsOn": "Instance",
+      "Condition": "UseElasticIP",
+      "Properties": {
+        "Domain": "vpc",
+        "InstanceId": { "Ref" : "Instance" }
+      }
+    }
+  }
+}

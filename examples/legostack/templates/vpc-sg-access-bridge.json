@@ -1,0 +1,67 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Generic template for bridging network access between stacks",
+  "Parameters": {
+    "ParamSourceSG": {
+      "Type": "String",
+      "Default" : "",
+      "Description": "Source security group. Can only be used if SourceCIDR is omitted"
+    },
+    "ParamSourceCIDR": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Source CIDR network. Can only be used if SourceSG is omitted"
+    },
+    "ParamDestinationSG": {
+      "Type": "String",
+      "Description": "Destination security group"
+    },
+    "ParamFromPort": {
+      "Type": "Number",
+      "Description": "First port in the range"
+    },
+    "ParamToPort": {
+      "Type": "Number",
+      "Description": "Last port in the range"
+    },
+    "ParamIpProtocol": {
+      "Type": "String",
+      "Default": "tcp",
+      "Description" : "Protocol (tcp/udp/icmp)"
+    }
+  },
+  "Conditions" : {
+    "UseCIDR" : {"Fn::And": [
+      {"Fn::Not": [ {"Fn::Equals" : [{"Ref" : "ParamSourceCIDR"}, ""]} ] },
+      {"Fn::Equals" : [{"Ref" : "ParamSourceSG"}, ""]}
+    ] },
+    "UseSG" : {"Fn::And": [
+      {"Fn::Not": [ {"Fn::Equals" : [{"Ref" : "ParamSourceSG"}, ""]} ] },
+      {"Fn::Equals" : [{"Ref" : "ParamSourceCIDR"}, ""]}
+    ] }
+  },
+  "Resources": {
+    "BridgeAccessRuleFromSG": {
+        "Condition" : "UseSG",
+        "Type": "AWS::EC2::SecurityGroupIngress",
+        "Properties": {
+            "GroupId" : { "Ref": "ParamDestinationSG" },
+            "SourceSecurityGroupId" : { "Ref": "ParamSourceSG" },
+            "IpProtocol" : { "Ref" : "ParamIpProtocol" },
+            "FromPort" : { "Ref" : "ParamFromPort" },
+            "ToPort" : { "Ref" : "ParamToPort" }
+        }
+    },
+    "BridgeAccessRuleFromCIDR": {
+        "Condition" : "UseCIDR",
+        "Type": "AWS::EC2::SecurityGroupIngress",
+        "Properties": {
+            "GroupId" : { "Ref": "ParamDestinationSG" },
+            "CidrIp" : { "Ref": "ParamSourceCIDR" },
+            "IpProtocol" : { "Ref" : "ParamIpProtocol" },
+            "FromPort" : { "Ref" : "ParamFromPort" },
+            "ToPort" : { "Ref" : "ParamToPort" }
+        }
+    }
+  }
+}

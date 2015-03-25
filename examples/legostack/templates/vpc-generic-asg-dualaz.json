@@ -1,0 +1,138 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Dual-AZ Auto-Scaling Generic Instances",
+  "Parameters": {
+    "ParamInstSubnet1": {
+      "Type": "AWS::EC2::Subnet::Id",
+      "Description": "Subnet 1 for auto-scaling-group"
+    },
+    "ParamInstSubnet2": {
+      "Type": "AWS::EC2::Subnet::Id",
+      "Description": "Subnet 2 for auto-scaling-group"
+    },
+    "ParamInstSubnet1AZ": {
+      "Type": "String",
+      "Description": "Subnet 1 Availability zone",
+      "AllowedPattern": "[a-z][a-z]-[a-z]+-[0-9][a-z]",
+      "ConstraintDescription": "Must select a valid AZ name within the target region"
+    },
+    "ParamInstSubnet2AZ": {
+      "Type": "String",
+      "Description": "Subnet 2 Availability zone",
+      "AllowedPattern": "[a-z][a-z]-[a-z]+-[0-9][a-z]",
+      "ConstraintDescription": "Must select a valid AZ name within the target region"
+    },
+    "ParamVPC": {
+      "Type": "AWS::EC2::VPC::Id",
+      "Description": "VPC ID"
+    },
+    "ParamRSAKeyName" : {
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "Description": "RSA Key for instances"
+    },
+    "ParamIamInstanceProfile" : {
+      "Type": "String",
+      "Description": "IAM Role Profile for instances"
+    },
+    "ParamInstanceAMI" : {
+      "Type": "String",
+      "Description": "ID of instance AMI"
+    },
+    "ParamInstanceDefaultSG": {
+      "Type": "AWS::EC2::SecurityGroup::Id",
+      "Description": "ID of Default Management SG"
+    },
+    "ParamInstanceType" : {
+      "Type": "String",
+      "Default" : "c3.large",
+      "Description": "Instance type for newly created instances"
+    },
+    "ParamASGMinCapacity" : {
+      "Type": "Number",
+      "Default": "0",
+      "Description": "Minimum capacity for the ASG"
+    },
+    "ParamASGMaxCapacity" : {
+      "Type": "Number",
+      "Default": "10",
+      "Description": "Maximum capacity for the ASG"
+    },
+    "ParamASGDesiredCapacity" : {
+      "Type": "Number",
+      "Default": "2",
+      "Description": "Desired capacity for the ASG"
+    }
+  },
+  "Resources": {
+
+    "SGInstances": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security Group for the ASG instances",
+        "VpcId": {
+          "Ref": "ParamVPC"
+        },
+        "SecurityGroupIngress": [
+          
+        ]
+      }
+    },
+    "InstLanuchConf": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "IamInstanceProfile": { "Ref": "ParamIamInstanceProfile" },
+        "ImageId": { "Ref" : "ParamInstanceAMI" },
+        "InstanceType": { "Ref" : "ParamInstanceType" },
+        "KeyName": { "Ref": "ParamRSAKeyName" },
+        "SecurityGroups": [
+          {
+            "Ref": "ParamInstanceDefaultSG"
+          },
+          {
+            "Ref": "SGInstances"
+          }
+        ],
+        "BlockDeviceMappings" : [ {
+          "DeviceName" : "/dev/sda1",
+          "Ebs" : {"VolumeSize" : "25"}
+        } ],
+        "UserData": { "Fn::Base64": { "Fn::Join": [ "",
+              [
+                "#!/bin/bash\n"
+              ]
+        ] } }
+      }
+    },
+    "InstASG": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "LaunchConfigurationName": {
+          "Ref": "InstLanuchConf"
+        },
+        "AvailabilityZones": [
+          { "Ref" : "ParamInstSubnet1AZ" },
+          { "Ref" : "ParamInstSubnet2AZ" }
+        ],
+        "HealthCheckType": "EC2",
+        "MaxSize": { "Ref" : "ParamASGMaxCapacity" },
+        "MinSize": { "Ref" : "ParamASGMinCapacity" },
+        "DesiredCapacity": { "Ref" : "ParamASGDesiredCapacity" },
+        "VPCZoneIdentifier": [
+          {
+            "Ref": "ParamInstSubnet1"
+          },
+          {
+            "Ref": "ParamInstSubnet2"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": { "Fn::Join": [ "@", [ "inst", { "Ref": "AWS::StackName" } ] ] },
+            "PropagateAtLaunch": "true"
+          }
+        ]
+      }
+    }
+  }
+}

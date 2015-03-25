@@ -1,0 +1,84 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Subnet across two availability zones",
+  "Parameters": {
+    "ParamVPC": {
+      "Type": "AWS::EC2::VPC::Id",
+      "Description": "VPC ID"
+    },
+    "ParamCIDR1": {
+      "Type": "String",
+	  "Description": "Subnet 1 CIDR",
+	  "AllowedPattern": "([0-9]{1,3}\\.){3}[0-9]{1,3}\/[0-9]{1,2}",
+	  "ConstraintDescription": "Parameter CIDRBlock must be a valid CIDR expression."
+    },
+    "ParamAZ1": {
+      "Type": "String",
+      "Description": "Subnet 1 Availability zone",
+      "AllowedPattern": "[a-z][a-z]-[a-z]+-[0-9][a-z]",
+      "ConstraintDescription": "Must select a valid AZ name within the target region."
+    },
+    "ParamRouteTable1": {
+      "Type": "String",
+      "Description": "Route table to attach the first subnet to (optional)",
+	  "Default" : ""
+    },
+    "ParamCIDR2": {
+      "Type": "String",
+      "Description": "Subnet 2 CIDR",
+	  "AllowedPattern": "([0-9]{1,3}\\.){3}[0-9]{1,3}\/[0-9]{1,2}",
+	  "ConstraintDescription": "Parameter CIDRBlock must be a valid CIDR expression."
+    },
+    "ParamAZ2": {
+      "Type": "String",
+      "Description": "Subnet 2 Availability zone",
+      "AllowedPattern": "[a-z][a-z]-[a-z]+-[0-9][a-z]",
+      "ConstraintDescription": "Must select a valid AZ name within the target region."
+    },
+    "ParamRouteTable2": {
+      "Type": "String",
+      "Description": "Route table to attach the second subnet to (optional)",
+	  "Default" : ""
+    }
+  },
+  "Conditions" : {
+    "HasRouteTable" : { "Fn::And" : [
+		{ "Fn::Not" : [ { "Fn::Equals" : [{"Ref" : "ParamRouteTable1"}, ""] } ] },
+		{ "Fn::Not" : [ { "Fn::Equals" : [{"Ref" : "ParamRouteTable2"}, ""] } ] }
+	] }
+  },
+  "Resources": {
+    "Subnet1" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "VpcId" : { "Ref" : "ParamVPC" },
+        "CidrBlock" : { "Ref" : "ParamCIDR1" },
+        "AvailabilityZone" : { "Ref" : "ParamAZ1" }
+      }
+    },
+    "Subnet2" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "VpcId" : { "Ref" : "ParamVPC" },
+        "CidrBlock" : { "Ref" : "ParamCIDR2" },
+        "AvailabilityZone" : { "Ref" : "ParamAZ2" }
+      }
+    },
+    "RouteTableAssociation1" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+	  "Condition": "HasRouteTable",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "Subnet1" },
+        "RouteTableId" : { "Ref" : "ParamRouteTable1" }
+      }
+    },
+    "RouteTableAssociation2" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+	  "Condition": "HasRouteTable",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "Subnet2" },
+        "RouteTableId" : { "Ref" : "ParamRouteTable2" }
+      }
+    }
+  }
+}

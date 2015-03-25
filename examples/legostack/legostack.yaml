@@ -1,0 +1,311 @@
+# In this example we leverage cumulus to build a two-tier DMZ/BACKEND infrastructure using only generic templates
+#
+# When all the stacks are created we'll be able to SSH to the jumpbox instance and from it SSH to a set of backend instances
+#
+
+legostack:
+  # Working on N.California. You can change it just remember to also update availablilty zones below and AMI ids
+  region: us-west-1
+  highlight-output: true
+  # Tags defined here are spread across every resource created by sub-stacks
+  tags:
+    globaltag: tagvalue
+  stacks:
+    #
+    # This is the foundation stack built on a bare VPC template that provides basic internet gateway and routing tables
+    # A "Management" security group is also created for convenience, altough not really used in this example
+    #
+    legostack:
+      cf_template: templates/vpc-base-dualaz.json
+      depends:
+      params:
+        # The VPC address space
+        ParamCIDRBlock:
+          value: 10.123.0.0/16
+        ParamAvailabilityZone1:
+          value: us-west-1b
+        ParamAvailabilityZone2:
+          value: us-west-1c
+        # This is a global keypair, it's saved in the foundation stack for convenience later on.
+        # You can always have different keys for different sub-stacks
+        # This keypair HAS to exist in the region you're creating the stack in
+        ParamGlobalRSAKey:
+          value: nebula
+    #
+    # Create a DMZ subnet using the generic subnet template
+    # The difference with an internal subnet is the routing table this subnet is associated with.
+    # Using PublicRouteTable from the foundation stack ensures this subnet will have the IGW as
+    # default gateway allowing instances in this subnet to use Elastic IPs
+    # 
+    dmz-sub:
+      cf_template: templates/vpc-subnet-dualaz.json
+      depends:
+        - legostack
+      params:
+        ParamCIDR1:
+          value: 10.123.1.0/25
+        ParamCIDR2:
+          value: 10.123.1.128/25
+        ParamVPC:
+          type: resource
+          source: legostack
+          variable: VPC
+        ParamAZ1:
+          type: parameter
+          source: legostack
+          variable: ParamAvailabilityZone1
+        ParamAZ2:
+          type: parameter
+          source: legostack
+          variable: ParamAvailabilityZone2
+        ParamRouteTable1:
+          type: resource
+          source: legostack
+          variable: PublicRouteTable
+        ParamRouteTable2:
+          type: resource
+          source: legostack
+          variable: PublicRouteTable
+    #
+    # This stack creates a pair of NAT instances inside the DMZ subnet.
+    # It also updates the internal routing tables created by the foundation stack setting the NAT instances as default gataway
+    # After this stack is created, every subnet using the InternalRouteTables will have internet access via the NAT instances
+    #
+    nat:
+      cf_template: templates/vpc-nat-dualaz.json
+      depends:
+        - legostack
+        - dmz-sub
+      params:
+        ParamVPC:
+          type: resource
+          source: legostack
+          variable: VPC
+        ParamVPCCDRBlock:
+          type: parameter
+          source: legostack
+          variable: ParamCIDRBlock
+        ParamInstSubnet1:
+          type: resource
+          source: dmz-sub
+          variable: Subnet1
+        ParamInstSubnet2:
+          type: resource
+          source: dmz-sub
+          variable: Subnet2
+        ParamRouteTable1:
+          type: resource
+          source: legostack
+          variable: InternalRouteTable1
+        ParamRouteTable2:
+          type: resource
+          source: legostack
+          variable: InternalRouteTable2
+        ParamRSAKeyName:
+          type: parameter
+          source: legostack
+          variable: ParamGlobalRSAKey
+        ParamIamInstanceProfile:
+          type: resource
+          source: legostack
+          variable: StandardInstanceRoleProfile
+        ParamInstanceDefaultSG:
+          type: resource
+          source: legostack
+          variable: SGBaseManagement
+          
+    #
+    # Creates a single generic instance with an Elastic IP inside the DMZ subnet
+    # The template used doesn't specifically allow any traffic to the instance, we'll use a special "bridge" stack later on
+    #
+    jumpbox:
+      cf_template: templates/vpc-generic-instance-singleaz.json
+      depends:
+        - legostack
+        - dmz-sub
+      params:
+        ParamInstanceType:
+          value: 't2.small'
+        ParamUseElasticIP:
+          value: 'true'
+        ParamInstanceAMI:
+          # Ubuntu 12.04 Precise HVM EBS
+          value: 'ami-0dad4949'
+
+        ParamInstSubnet:
+          type: resource
+          source: dmz-sub
+          variable: Subnet1
+        ParamVPC:
+          type: resource
+          source: legostack
+          variable: VPC
+        ParamRSAKeyName:
+          type: parameter
+          source: legostack
+          variable: ParamGlobalRSAKey
+        ParamIamInstanceProfile:
+          type: resource
+          source: legostack
+          variable: StandardInstanceRoleProfile
+        ParamInstanceDefaultSG:
+          type: resource
+          source: legostack
+          variable: SGBaseManagement
+          
+    #
+    # Creates an internal subnet for backend nodes. Note the route tables used are the internal ones from the foundation stack
+    # meaning instances placed in here are not directly reachable from the internet and all outbound traffic goes thrugh the NAT
+    #
+    backend-sub:
+      cf_template: templates/vpc-subnet-dualaz.json
+      depends:
+        - legostack
+      params:
+        ParamCIDR1:
+          value: 10.123.10.0/25
+        ParamCIDR2:
+          value: 10.123.10.128/25
+        ParamVPC:
+          type: resource
+          source: legostack
+          variable: VPC
+        ParamAZ1:
+          type: parameter
+          source: legostack
+          variable: ParamAvailabilityZone1
+        ParamAZ2:
+          type: parameter
+          source: legostack
+          variable: ParamAvailabilityZone2
+        ParamRouteTable1:
+          type: resource
+          source: legostack
+          variable: InternalRouteTable1
+        ParamRouteTable2:
+          type: resource
+          source: legostack
+          variable: InternalRouteTable2
+          
+    #
+    # Creates an Auto-Scaling-Group inside the backend subnet. Again no traffic is allowed by default into the instances. We'll use a "bridge"
+    #
+    backend-cluster:
+      cf_template: templates/vpc-generic-asg-dualaz.json
+      depends:
+        - legostack
+        - backend-sub
+        - nat
+      params:
+        ParamInstanceType:
+          value: 't2.small'
+        ParamInstanceAMI:
+          # Ubuntu 12.04 Precise HVM EBS
+          value: 'ami-0dad4949'
+        ParamASGDesiredCapacity:
+          value: 2
+
+        ParamInstSubnet1:
+          type: resource
+          source: backend-sub
+          variable: Subnet1
+        ParamInstSubnet2:
+          type: resource
+          source: backend-sub
+          variable: Subnet2
+        ParamInstSubnet1AZ:
+          type: parameter
+          source: legostack
+          variable: ParamAvailabilityZone1
+        ParamInstSubnet2AZ:
+          type: parameter
+          source: legostack
+          variable: ParamAvailabilityZone2
+        ParamVPC:
+          type: resource
+          source: legostack
+          variable: VPC
+        ParamRSAKeyName:
+          type: parameter
+          source: legostack
+          variable: ParamGlobalRSAKey
+        ParamIamInstanceProfile:
+          type: resource
+          source: legostack
+          variable: StandardInstanceRoleProfile
+        ParamInstanceDefaultSG:
+          type: resource
+          source: legostack
+          variable: SGBaseManagement
+          
+    #
+    # This stack injects a rule into the backend nodes' SG allowing SSH access from the jumpbox node's SG
+    #
+    sgbr-jumpbox-becluster:
+      cf_template: templates/vpc-sg-access-bridge.json
+      depends:
+        - jumpbox
+        - backend-cluster
+      params:
+        ParamFromPort:
+          value: 22
+        ParamToPort:
+          value: 22
+        ParamIpProtocol:
+          value: tcp
+          
+        ParamSourceSG:
+          type: resource
+          source: jumpbox
+          variable: SGInstance
+        ParamDestinationSG:
+          type: resource
+          source: backend-cluster
+          variable: SGInstances
+          
+    #
+    # This stack injects a rule into the jumpbox's SG allowing SSH access from the internet
+    #
+    sgbr-public-jumpbox:
+      cf_template: templates/vpc-sg-access-bridge.json
+      depends:
+        - jumpbox
+      params:
+        ParamFromPort:
+          value: 22
+        ParamToPort:
+          value: 22
+        ParamIpProtocol:
+          value: tcp
+        ParamSourceCIDR:
+          value: 0.0.0.0/0
+        
+
+        ParamDestinationSG:
+          type: resource
+          source: jumpbox
+          variable: SGInstance
+          
+    #
+    # Add a scheduled capacity change to the backend autoscaling-group.
+    #
+    scaleup-midday:
+      cf_template: templates/asg-scheduled-capacity-change.json
+      depends:
+        - backend-cluster
+      params:
+        # Scale up to 4 instances every day at 11:30 AM Eastern Australia Time
+        ParamFirstRecurrence:
+          value: '30 0 * * *'
+        ParamFirstCapacity:
+          value: 4
+        # Scale down to 2 instances every day at 12:30 PM Eastern Australia Time
+        ParamSecondRecurrence:
+          value: '30 1 * * *'
+        ParamSecondCapacity:
+          value: 2
+          
+        ParamAutoScalingGroup:
+          type: resource
+          source: backend-cluster
+          variable: InstASG

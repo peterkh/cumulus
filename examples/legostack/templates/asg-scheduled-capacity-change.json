@@ -1,0 +1,46 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Pluggable stack to change ASG desiredcapacity on two recurring schedules",
+  "Parameters": {
+    "ParamAutoScalingGroup": {
+      "Type": "String",
+      "Description": "ASG Identifier"
+    },
+    "ParamFirstRecurrence": {
+      "Type": "String",
+      "Description": "Cron-Like expression for the first schedule"
+    },
+    "ParamFirstCapacity": {
+      "Type": "Number",
+      "MinValue" : "0",
+      "Description": "Capacity on first schedule"
+    },
+    "ParamSecondRecurrence": {
+      "Type": "String",
+      "Description": "Cron-Like expression for the second schedule"
+    },
+    "ParamSecondCapacity" : {
+      "Type": "Number",
+      "MinValue" : "0",
+      "Description": "Capacity on second schedule"
+    }
+  },
+  "Resources": {
+    "FirstSchedule" : {
+      "Type" : "AWS::AutoScaling::ScheduledAction",
+      "Properties" : {
+        "AutoScalingGroupName" : { "Ref" : "ParamAutoScalingGroup" },
+        "DesiredCapacity" : { "Ref" : "ParamFirstCapacity" },
+        "Recurrence" : { "Ref" : "ParamFirstRecurrence" }
+      }
+    },
+    "SecondSchedule" : {
+      "Type" : "AWS::AutoScaling::ScheduledAction",
+      "Properties" : {
+        "AutoScalingGroupName" : { "Ref" : "ParamAutoScalingGroup" },
+        "DesiredCapacity" : { "Ref" : "ParamSecondCapacity" },
+        "Recurrence" : { "Ref" : "ParamSecondRecurrence" }
+      }
+    }
+  }
+}
