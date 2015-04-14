@@ -172,6 +172,26 @@ class MegaStack(object):
                                  % (stack.cf_stack_name,
                                     bool(stack.exists_in_cf(
                                          self.cf_desc_stacks))))
+                stack.read_template()
+                template_up_to_date = stack.template_uptodate(self.cf_desc_stacks)
+                params_up_to_date = stack.params_uptodate(self.cf_desc_stacks)
+                from pprint import pformat
+                old_params = params_up_to_date['old']
+                new_params = params_up_to_date['new']
+                old_template = template_up_to_date['old']
+                new_template = template_up_to_date['new']
+                with open('/tmp/old', 'w') as f:
+                    f.write("Params:\n")
+                    f.write(pformat(old_params))
+                    f.write("Template:\n")
+                    f.write(pformat(old_template))
+                with open('/tmp/new', 'w') as f:
+                    f.write("Params:\n")
+                    f.write(pformat(new_params))
+                    f.write("Template:\n")
+                    f.write(pformat(new_template))
+                os.system('vimdiff /tmp/old /tmp/new')
+#                print params_up_to_date
 
     def create(self, stack_name=None):
         """
@@ -302,7 +322,7 @@ class MegaStack(object):
             params_up_to_date = stack.params_uptodate(self.cf_desc_stacks)
             self.logger.debug("Stack is up to date: %s"
                               % (template_up_to_date and params_up_to_date))
-            if template_up_to_date and params_up_to_date:
+            if template_up_to_date['uptodate'] and params_up_to_date['uptodate']:
                 self.logger.info(
                     "Stack %s is already up to date with CloudFormation,"
                     " skipping..." % stack.name)
