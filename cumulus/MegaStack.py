@@ -188,22 +188,27 @@ class MegaStack(object):
                 stack.read_template()
                 template_up_to_date = stack.template_uptodate(self.cf_desc_stacks)
                 params_up_to_date = stack.params_uptodate(self.cf_desc_stacks)
-                from pprint import pformat
                 old_params = params_up_to_date['old']
                 new_params = params_up_to_date['new']
                 old_template = template_up_to_date['old']
                 new_template = template_up_to_date['new']
-                with open('/tmp/old', 'w') as f:
-                    f.write("Params:\n")
-                    f.write(pformat(old_params))
-                    f.write("Template:\n")
-                    f.write(pformat(old_template))
-                with open('/tmp/new', 'w') as f:
-                    f.write("Params:\n")
-                    f.write(pformat(new_params))
-                    f.write("Template:\n")
-                    f.write(pformat(new_template))
-                os.system('vimdiff /tmp/old /tmp/new')
+                if old_params == new_params and old_template == new_template:
+                    self.logger.info("Params and Template match")
+                else:
+                    self.logger.info("Params or Template mismatch. "
+                                     "Launching vimdiff")
+                    from pprint import pformat
+                    with open('/tmp/old', 'w') as f:
+                        f.write("Params:\n")
+                        f.write(pformat(old_params))
+                        f.write("Template:\n")
+                        f.write(pformat(old_template))
+                    with open('/tmp/new', 'w') as f:
+                        f.write("Params:\n")
+                        f.write(pformat(new_params))
+                        f.write("Template:\n")
+                        f.write(pformat(new_template))
+                    os.system('vimdiff /tmp/old /tmp/new')
 #                print params_up_to_date
 
     def create(self, stack_name=None):

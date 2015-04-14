@@ -272,12 +272,12 @@ class CFStack(object):
             cf_temp_dict = yaml.load(cf_temp_body)
             old_template = yaml.load(cf_temp_body)
             new_template = yaml.load(self.template_body)
+            return_dict['old'] = old_template
+            return_dict['new'] = new_template
             if cf_temp_dict == yaml.load(self.template_body):
                 return_dict['uptodate'] = True
                 return return_dict
         return_dict['uptodate'] = False
-        return_dict['old'] = old_template
-        return_dict['new'] = new_template
         return return_dict
 
     def params_uptodate(self, current_cf_stacks):
