@@ -139,6 +139,7 @@ class MegaStack(object):
                                 if stack_obj.name == node:
                                     no_deps.append(stack_obj)
                             del dep_graph[node]
+        self.logger.debug("Dependency graph for %s: %s" %(stack.name, dep_graph))
         if len(dep_graph) > 0:
             self.logger.critical("Could not resolve dependency order." +
                                  " Either circular dependency or " +
@@ -157,6 +158,11 @@ class MegaStack(object):
             if stack_name and stack.name != stack_name:
                 continue
             self.logger.info("Starting check of stack %s" % stack.name)
+            if not stack.exists_in_cf(self.cf_desc_stacks):
+                self.logger.critical(
+                    "Stack %s doesn't exist in cloudformation, can't check"
+                    " something that doesn't exist." % stack.name)
+                exit(1)
             if not stack.populate_params(self.cf_desc_stacks):
                 info_message = ("Could not determine correct parameters for" +
                                 "CloudFormation stack %s\n\tMost likely " +
@@ -173,12 +179,8 @@ class MegaStack(object):
                                     bool(stack.exists_in_cf(
                                          self.cf_desc_stacks))))
                 stack.read_template()
-                template_up_to_date = stack.template_uptodate(self.cf_desc_stacks)
-                params_up_to_date = stack.params_uptodate(self.cf_desc_stacks)
-                old_params = params_up_to_date['old']
-                new_params = params_up_to_date['new']
-                old_template = template_up_to_date['old']
-                new_template = template_up_to_date['new']
+                template_uptodate, old_template, new_template = stack.template_uptodate(self.cf_desc_stacks)
+                params_uptodate, old_params, new_params = stack.params_uptodate(self.cf_desc_stacks)
                 if old_params == new_params and old_template == new_template:
                     self.logger.info("Params and Template match")
                 else:
@@ -188,11 +190,13 @@ class MegaStack(object):
                     with open('/tmp/old', 'w') as f:
                         f.write("Params:\n")
                         f.write(pformat(old_params))
+                        f.write("\n")
                         f.write("Template:\n")
                         f.write(pformat(old_template))
                     with open('/tmp/new', 'w') as f:
                         f.write("Params:\n")
                         f.write(pformat(new_params))
+                        f.write("\n")
                         f.write("Template:\n")
                         f.write(pformat(new_template))
                     os.system('vimdiff /tmp/old /tmp/new')
@@ -323,11 +327,11 @@ class MegaStack(object):
                                      " for stack %s" % stack.name)
                 exit(1)
             stack.read_template()
-            template_up_to_date = stack.template_uptodate(self.cf_desc_stacks)
-            params_up_to_date = stack.params_uptodate(self.cf_desc_stacks)
+            template_up_to_date, old_template, new_template = stack.template_uptodate(self.cf_desc_stacks)
+            params_up_to_date, old_params, new_params = stack.params_uptodate(self.cf_desc_stacks)
             self.logger.debug("Stack is up to date: %s"
                               % (template_up_to_date and params_up_to_date))
-            if template_up_to_date['uptodate'] and params_up_to_date['uptodate']:
+            if template_up_to_date and params_up_to_date:
                 self.logger.info(
                     "Stack %s is already up to date with CloudFormation,"
                     " skipping..." % stack.name)
@@ -536,3 +540,19 @@ class MegaStack(object):
             resp = self.cfconn.describe_stacks(next_token=resp.next_token)
             result.extend(resp)
         return result
+
+    def cost(self, stack_name):
+        """
+        Show a cost estimate for a stack
+        """
+        for stack in self.stack_objs:
+            if stack_name and stack.name != stack_name:
+                continue
+            self.logger.info(stack_name)
+            stack.populate_params(self.cf_desc_stacks)
+            stack.read_template()
+            print stack.template_body
+            costconn = cloudformation.connect_to_region('ap-southeast-2')
+            resp = costconn.estimate_template_cost(template_body=stack.template_body,
+                                                      parameters=stack.get_params_tuples())
+            self.logger.info(resp)

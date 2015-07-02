@@ -38,7 +38,7 @@ def main():
     args = conf_parser.parse_args()
 
     # Validate that action is something we know what to do with
-    valid_actions = ['create', 'check', 'update', 'delete', 'watch']
+    valid_actions = ['create', 'check', 'update', 'delete', 'watch', 'cost']
     if args.action not in valid_actions:
         print ("Invalid action provided, must be one of: '%s'"
                % (", ".join(valid_actions)))
@@ -93,6 +93,9 @@ def main():
 
     if args.action == 'watch':
         the_mega_stack.watch(args.stackname)
+
+    if args.action == 'cost':
+        the_mega_stack.cost(args.stackname)
 
 if __name__ == '__main__':
     main()

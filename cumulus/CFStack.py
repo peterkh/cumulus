@@ -222,7 +222,6 @@ class CFStack(object):
         false if not or stack not found.
         """
         cf_stack = self.exists_in_cf(current_cf_stacks)
-        return_dict = {}
         import yaml
         if cf_stack:
             cf_temp_res = cf_stack.get_template()['GetTemplateResponse']
@@ -230,34 +229,27 @@ class CFStack(object):
             cf_temp_dict = simplejson.loads(cf_temp_body)
             old_template = yaml.load(cf_temp_body)
             new_template = yaml.load(self.template_body)
-            return_dict['old'] = old_template
-            return_dict['new'] = new_template
             if cf_temp_dict == simplejson.loads(self.template_body):
-                return_dict['uptodate'] = True
-                return return_dict
-        return_dict['uptodate'] = False
-        return return_dict
+                return (True, old_template, new_template)
+        return (False, old_template, new_template)
 
     def params_uptodate(self, current_cf_stacks):
         """
         Check if parameters in stack are up to date with Cloudformation
         """
         cf_stack = self.exists_in_cf(current_cf_stacks)
-        return_dict = {}
-        return_dict['old'] = cf_stack.parameters
-        return_dict['old'] = dict((str(p.key), str(p.value)) for p in cf_stack.parameters)
-        return_dict['new'] = self.params
+        old_params = dict((str(p.key),
+                           str(p.value)) for p in cf_stack.parameters)
+        new_params = self.params
         if not cf_stack:
-            return_dict['uptodate'] = False
-            return return_dict
+            return(False, old_params, new_params)
 
         # If number of params in CF and this stack obj dont match,
         # then it needs updating
         if len(cf_stack.parameters) != len(self.params):
             msg = "New and old parameter lists are different lengths for %s"
             self.logger.debug(msg, self.name)
-            return_dict['uptodate'] = False
-            return return_dict
+            return(False, old_params, new_params)
 
         for param in cf_stack.parameters:
             # check if param in CF exists in our new parameter set,
@@ -268,16 +260,13 @@ class CFStack(object):
                 msg = ("New params are missing key %s that exists in CF for %s"
                        + " stack already.")
                 self.logger.debug(msg, key, self.name)
-                return_dict['uptodate'] = False
-                return return_dict
+                return(False, old_params, new_params)
             # if the value of parameters are different, needs updating
             if self.params[key] != value:
                 msg = "Param %s for stack %s has changed from %s to %s"
                 self.logger.debug(msg, key, self.name,
                                   value, self.params[key])
-                return_dict['uptodate'] = False
-                return return_dict
+                return(False, old_params, new_params)
 
         # We got to the end without returning False, so must be fine.
-        return_dict['uptodate'] = True
-        return return_dict
+        return(True, old_params, new_params)
