@@ -15,6 +15,6 @@ setup(
                 ' templates',
     packages=find_packages(),
     include_package_data=True,
-    install_requires=['PyYAML', 'argparse', 'boto', 'simplejson', 'pystache'],
+    install_requires=['PyYAML', 'argparse', 'boto', 'boto3', 'simplejson', 'pystache'],
     scripts=glob('bin/*'),
 )
