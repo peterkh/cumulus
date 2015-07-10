@@ -35,7 +35,7 @@ class CFStack(object):
                 else:
                     self.depends_on.append("%s-%s" % (mega_stack_name, dep))
         self.region = region
-        self.ec2 = boto3.client('ec2')
+        self.ec2 = boto3.client('ec2', region_name=region)
         self.sns_topic_arn = sns_topic_arn
 
         # Safer than setting default value for tags = {}
