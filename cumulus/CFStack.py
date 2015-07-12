@@ -136,9 +136,9 @@ class CFStack(object):
                 var_type=param_dict['type'],
                 var_name=param_dict['variable'])
         elif ('aws' in param_dict
-               and 'command' in param_dict
-               and 'index' in param_dict
-               and 'variable' in param_dict):
+              and 'command' in param_dict
+              and 'index' in param_dict
+              and 'variable' in param_dict):
             if param_dict['aws'] == 'ec2':
                 return self.get_value_from_ec2(
                     command=param_dict['command'],
@@ -220,8 +220,9 @@ class CFStack(object):
                     if str(key) == var_name:
                         return str(value)
         else:
-            error_message = ("Error: invalid command passed to" +
-                             " get_value_from_ec2, needs to be describe-availability-zones. " +
+            error_message = ("Error: invalid command passed to " +
+                             "get_value_from_ec2, " +
+                             "needs to be describe-availability-zones. " +
                              "Not: %s")
             self.logger.critical(error_message, (command))
             exit(1)
