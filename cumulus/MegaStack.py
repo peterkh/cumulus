@@ -31,7 +31,8 @@ class MegaStack(object):
         if len(list(self.stackDict.keys())) != 1:
             error_message = ("Need one and only one mega stack name at the"
                              + " top level, found %s")
-            self.logger.critical(error_message % len(list(self.stackDict.keys())))
+            self.logger.critical(error_message % len(list(
+                self.stackDict.keys())))
             exit(1)
 
         # Now we know we only have one top element,
