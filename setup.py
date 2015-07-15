@@ -3,7 +3,6 @@ from ez_setup import use_setuptools
 use_setuptools()
 
 from setuptools import setup, find_packages
-from glob import glob
 
 setup(
     name="cumulus",
@@ -16,5 +15,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=['PyYAML', 'argparse', 'boto', 'simplejson', 'pystache'],
-    scripts=glob('bin/*'),
+    entry_points={
+        'console_scripts': [
+            'cumulus=cumulus:main']}
 )
