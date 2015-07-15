@@ -28,15 +28,15 @@ class MegaStack(object):
 
         self.stackDict = yaml.safe_load(rendered_file)
         # Make sure there is only one top level element in the yaml file
-        if len(self.stackDict.keys()) != 1:
+        if len(list(self.stackDict.keys())) != 1:
             error_message = ("Need one and only one mega stack name at the"
                              + " top level, found %s")
-            self.logger.critical(error_message % len(self.stackDict.keys()))
+            self.logger.critical(error_message % len(list(self.stackDict.keys())))
             exit(1)
 
         # Now we know we only have one top element,
         # that must be the mega stack name
-        self.name = self.stackDict.keys()[0]
+        self.name = list(self.stackDict.keys())[0]
 
         # Find and set the mega stacks region. Exit if we can't find it
         if 'region' in self.stackDict[self.name]:
@@ -60,7 +60,7 @@ class MegaStack(object):
         self.stack_objs = []
 
         # Get the names of the sub stacks from the yaml file and sort in array
-        self.cf_stacks = self.stackDict[self.name]['stacks'].keys()
+        self.cf_stacks = list(self.stackDict[self.name]['stacks'].keys())
 
         # Megastack holds the connection to CloudFormation and list of stacks
         # currently in our region stops us making lots of calls to
@@ -95,8 +95,8 @@ class MegaStack(object):
                                              % (topic, self.region))
                         exit(1)
                 local_tags = the_stack.get('tags', {})
-                merged_tags = dict(self.global_tags.items()
-                                   + local_tags.items())
+                merged_tags = dict(list(self.global_tags.items())
+                                   + list(local_tags.items()))
                 # Add static cumulus-stack tag
                 merged_tags['cumulus-stack'] = self.name
                 if 'cf_template' in the_stack:
@@ -130,7 +130,7 @@ class MegaStack(object):
         while len(no_deps) > 0:
             stack = no_deps.pop()
             sorted_stacks.append(stack)
-            for node in dep_graph.keys():
+            for node in list(dep_graph.keys()):
                 for deps in dep_graph[node]:
                     if stack.cf_stack_name == deps:
                         dep_graph[node].remove(stack.cf_stack_name)
@@ -248,7 +248,7 @@ class MegaStack(object):
                     "Stack %s doesn't exist in CloudFormation, skipping"
                     % stack.name)
             else:
-                confirm = raw_input(
+                confirm = input(
                     "Confirm you wish to delete stack %s (Name in CF: %s)"
                     " (type 'yes' if so): "
                     % (stack.name, stack.cf_stack_name))

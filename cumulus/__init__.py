@@ -40,22 +40,22 @@ def main():
     # Validate that action is something we know what to do with
     valid_actions = ['create', 'check', 'update', 'delete', 'watch']
     if args.action not in valid_actions:
-        print ("Invalid action provided, must be one of: '%s'"
-               % (", ".join(valid_actions)))
+        print(("Invalid action provided, must be one of: '%s'"
+               % (", ".join(valid_actions))))
         exit(1)
 
     # Make sure we can read the yaml file provided
     try:
         open(args.yamlfile, 'r')
     except IOError as exception:
-        print "Cannot read yaml file %s: %s" % (args.yamlfile, exception)
+        print("Cannot read yaml file %s: %s" % (args.yamlfile, exception))
         exit(1)
 
     # Get and configure the log level
     numeric_level = getattr(logging, args.loglevel.upper(), None)
     boto_numeric_level = getattr(logging, args.botologlevel.upper(), None)
     if not isinstance(numeric_level, int):
-        print 'Invalid log level: %s' % args.loglevel
+        print('Invalid log level: %s' % args.loglevel)
         exit(1)
     logging.basicConfig(level=numeric_level)
     logger = logging.getLogger(__name__)
