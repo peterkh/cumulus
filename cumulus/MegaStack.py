@@ -104,11 +104,11 @@ class MegaStack(object):
                         CFStack(
                             mega_stack_name=self.name,
                             name=stack_name,
-                            params=the_stack['params'],
+                            params=the_stack.get('params'),
                             template_name=the_stack['cf_template'],
                             region=self.region,
                             sns_topic_arn=local_sns_arn,
-                            depends_on=the_stack['depends'],
+                            depends_on=the_stack.get('depends'),
                             tags=merged_tags
                         )
                     )
