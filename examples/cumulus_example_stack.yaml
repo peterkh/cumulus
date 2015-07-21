@@ -8,7 +8,7 @@ example-stack:
 #   sns-topic-arn:
 #       - arn:aws:sns:region:account:topic1
 #       - arn:aws:sns:region:account:topic2
-    #The region Cumulus will create the stack in 
+    #The region Cumulus will create the stack in
     region: us-west-2
     #Turn on colour cloudformation event status output
     highlight-output: true
