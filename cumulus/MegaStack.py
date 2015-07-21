@@ -10,7 +10,7 @@ import yaml
 import pystache
 import os
 from cumulus.CFStack import CFStack
-from boto import cloudformation
+from boto import cloudformation, iam
 
 
 class MegaStack(object):
@@ -45,6 +45,19 @@ class MegaStack(object):
             self.logger.critical("No region specified for mega stack,"
                                  + " don't know where to build it.")
             exit(1)
+
+        if 'account_id' in self.stackDict[self.name]:
+            # Get the account ID for the current AWS credentials
+            iamconn = iam.connect_to_region(self.region)
+            user_response = iamconn.get_user()['get_user_response']
+            user_result = user_response['get_user_result']
+            account_id = user_result['user']['arn'].split(':')[4]
+
+            # Check if the current account ID matches the stack's account ID
+            if account_id != str(self.stackDict[self.name]['account_id']):
+                self.logger.critical("Account ID of stack does not match the"
+                                     + " account ID of your AWS credentials.")
+                exit(1)
 
         self.sns_topic_arn = self.stackDict[self.name].get('sns-topic-arn', [])
         if isinstance(self.sns_topic_arn, str):
