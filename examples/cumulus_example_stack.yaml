@@ -8,10 +8,12 @@ example-stack:
 #   sns-topic-arn:
 #       - arn:aws:sns:region:account:topic1
 #       - arn:aws:sns:region:account:topic2
-    #The region Cumulus will create the stack in 
+    #The region Cumulus will create the stack in
     region: us-west-2
     #Turn on colour cloudformation event status output
     highlight-output: true
+    #Limit the account in which this stack can be run
+    account_id: 972549067366
     stacks:
         #Base stack, has the same name as the top level. Cumulus knows not to call it examplestack-example-stack.
         #This template has no parameters to pass in
