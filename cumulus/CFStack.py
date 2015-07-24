@@ -95,7 +95,7 @@ class CFStack(object):
             self.params = {}
             return True
         if self.deps_met(current_cf_stacks):
-            for param_name, param_val in self.yaml_params.iteritems():
+            for param_name, param_val in self.yaml_params.items():
                 if type(param_val) is dict:
                     self.params[param_name] = self._parse_param(
                         param_name, param_val)
@@ -191,7 +191,7 @@ class CFStack(object):
         """
         tuple_list = []
         if len(self.params) > 0:
-            for param in self.params.keys():
+            for param in list(self.params.keys()):
                 tuple_list.append((param, self.params[param]))
         return tuple_list
 
