@@ -10,6 +10,7 @@ import yaml
 import pystache
 import os
 from cumulus.CFStack import CFStack
+import cumulus.AWS
 from boto import cloudformation, iam
 
 
@@ -45,6 +46,9 @@ class MegaStack(object):
             self.logger.critical("No region specified for mega stack,"
                                  + " don't know where to build it.")
             exit(1)
+
+        # create a CloudFormation object to pass in to each CFStack object
+        self.cf_object = cumulus.AWS.CloudFormation(self.region)
 
         if 'account_id' in self.stackDict[self.name]:
             # Get the account ID for the current AWS credentials
@@ -122,7 +126,8 @@ class MegaStack(object):
                             region=self.region,
                             sns_topic_arn=local_sns_arn,
                             depends_on=the_stack.get('depends'),
-                            tags=merged_tags
+                            tags=merged_tags,
+                            cf_object=self.cf_object
                         )
                     )
 
@@ -192,37 +197,33 @@ class MegaStack(object):
         Any that already exist are skipped (no attempt to update)
         """
         for stack in self.stack_objs:
+            # If we pass in a stack_name, only create that stack
             if stack_name and stack.name != stack_name:
                 continue
-            self.logger.info("Starting checks for creation of stack: %s"
-                             % stack.name)
+
+            self.logger.info("Starting checks for creation of stack: %s",
+                             stack.name)
             if stack.exists_in_cf(self.cf_desc_stacks):
                 self.logger.info("Stack %s already exists in CloudFormation,"
-                                 " skipping" % stack.name)
+                                 " skipping", stack.name)
             else:
                 if stack.deps_met(self.cf_desc_stacks) is False:
                     self.logger.critical("Dependancies for stack %s not met"
-                                         " and they should be, exiting..."
-                                         % stack.name)
+                                         " and they should be, exiting...",
+                                         stack.name)
                     exit(1)
                 if not stack.populate_params(self.cf_desc_stacks):
                     self.logger.critical("Could not determine correct "
-                                         "parameters for stack %s"
-                                         % stack.name)
+                                         "parameters for stack %s",
+                                         stack.name)
                     exit(1)
 
                 stack.read_template()
-                self.logger.info("Creating: %s, %s" % (
-                    stack.cf_stack_name, stack.get_params_tuples()))
+                self.logger.info("Creating: %s, %s",
+                                 stack.cf_stack_name,
+                                 stack.get_params_tuples())
                 try:
-                    self.cfconn.create_stack(
-                        stack_name=stack.cf_stack_name,
-                        template_body=stack.template_body,
-                        parameters=stack.get_params_tuples(),
-                        capabilities=['CAPABILITY_IAM'],
-                        notification_arns=stack.sns_topic_arn,
-                        tags=stack.tags
-                    )
+                    stack.create()
                 except Exception as exception:
                     self.logger.critical(
                         "Creating stack %s failed. Error: %s" % (
@@ -269,7 +270,7 @@ class MegaStack(object):
                     self.logger.info("Not confirmed, skipping...")
                     continue
                 self.logger.info("Starting delete of stack %s" % stack.name)
-                self.cfconn.delete_stack(stack.cf_stack_name)
+                stack.delete()
                 delete_result = self.watch_events(
                     stack.cf_stack_name, "DELETE_IN_PROGRESS")
                 if (delete_result != "DELETE_COMPLETE"

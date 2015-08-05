@@ -4,6 +4,7 @@ CFStack module. Manages a single CloudFormation stack.
 import logging
 import simplejson
 from boto import cloudformation
+from cumulus.AWS import CloudFormation
 
 
 class CFStack(object):
@@ -12,8 +13,10 @@ class CFStack(object):
     region, template and what other stacks it depends on.
     """
     def __init__(self, mega_stack_name, name, params, template_name, region,
-                 sns_topic_arn, tags=None, depends_on=None):
+                 sns_topic_arn, cf_object, tags=None, depends_on=None):
         self.logger = logging.getLogger(__name__)
+        # the object that will interface to CloudFormation API for us
+        self.cf_object = cf_object
         if mega_stack_name == name:
             self.cf_stack_name = name
         else:
@@ -41,6 +44,11 @@ class CFStack(object):
             self.tags = {}
         else:
             self.tags = tags
+
+        # because boto3, we need tags in a list as well
+        self.tags_list = []
+        for tag in self.tags:
+            self.tags_list.append({'Key': tag, 'Value': self.tags[tag]})
 
         try:
             open(template_name, 'r')
@@ -195,6 +203,19 @@ class CFStack(object):
                 tuple_list.append((param, self.params[param]))
         return tuple_list
 
+    def get_params_boto3(self):
+        """
+        Convert param dict to array of tuples needed by boto3
+        """
+        param_list = []
+        for param in self.params.keys():
+            param_list.append({
+                'ParameterKey': param,
+                'ParameterValue': self.params[param]})
+
+        return param_list
+
+
     def read_template(self):
         """
         Open and parse the json template for this stack
@@ -264,3 +285,21 @@ class CFStack(object):
 
         # We got to the end without returning False, so must be fine.
         return True
+
+    def create(self):
+        """
+        Create this stack in CloudFormation
+        """
+        self.cf_object.create_stack(
+            stack_name=self.cf_stack_name,
+            template_body=self.template_body,
+            parameters=self.get_params_boto3(),
+            notification_arns=self.sns_topic_arn,
+            tags=self.tags_list
+            )
+
+    def delete(self):
+        """
+        Delete this stack in CloudFormation
+        """
+        self.cf_object.delete_stack(stack_name=self.cf_stack_name)
