@@ -60,17 +60,18 @@ class MegaStack(object):
             self.sts_role = None
 
         # Connect to STS and assume the provided role
-        if not self.sts_role is None:
+        if self.sts_role is not None:
             try:
                 stsconn = sts.connect_to_region(self.region,
                                                 profile_name=self.aws_profile)
-                assumed_role = stsconn.assume_role(role_arn=self.sts_role,
-                                                   role_session_name='cumulus')
-                self.aws_access_key_id = assumed_role.credentials.access_key
-                self.aws_secret_access_key = assumed_role.credentials.secret_key
-                self.aws_session_token = assumed_role.credentials.session_token
-                self.logger.info("Using STS credentials to set up stack, stack "
-                                 + "creation may fail if it takes longer than 1 hour")
+                role = stsconn.assume_role(role_arn=self.sts_role,
+                                           role_session_name='cumulus')
+                self.aws_access_key_id = role.credentials.access_key
+                self.aws_secret_access_key = role.credentials.secret_key
+                self.aws_session_token = role.credentials.session_token
+                self.logger.info("Using STS credentials to set up stack, stack"
+                                 + " creation may fail if it takes longer than"
+                                 + " 1 hour")
             except BotoServerError as e:
                 self.logger.critical("Could not assume STS role")
                 self.logger.critical(e.message)
@@ -83,13 +84,13 @@ class MegaStack(object):
         # Connect to an AWS service using proper credentials
         def connect(service):
             kwargs = {}
-            if not self.aws_access_key_id is None \
-                and not self.aws_secret_access_key is None:
+            if self.aws_access_key_id is not None \
+                    and self.aws_secret_access_key is not None:
                 # Using an STS assumed role
                 kwargs['aws_access_key_id'] = self.aws_access_key_id
                 kwargs['aws_secret_access_key'] = self.aws_secret_access_key
                 kwargs['security_token'] = self.aws_session_token
-            elif not self.aws_profile is None:
+            elif self.aws_profile is not None:
                 # Using an AWS profile
                 kwargs['profile_name'] = self.aws_profile
             return service.connect_to_region(self.region, **kwargs)
