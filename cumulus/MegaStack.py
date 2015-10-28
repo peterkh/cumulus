@@ -10,7 +10,8 @@ import yaml
 import pystache
 import os
 from cumulus.CFStack import CFStack
-from boto import cloudformation, iam
+from boto import cloudformation, iam, sts
+from boto.exception import BotoServerError
 
 
 class MegaStack(object):
@@ -46,9 +47,56 @@ class MegaStack(object):
                                  + " don't know where to build it.")
             exit(1)
 
+        # Find and set the mega stack's AWS profile
+        if 'aws_profile' in self.stackDict[self.name]:
+            self.aws_profile = self.stackDict[self.name]['aws_profile']
+        else:
+            self.aws_profile = None
+
+        # Find and set the mega stack's STS role ARN
+        if 'sts_role' in self.stackDict[self.name]:
+            self.sts_role = self.stackDict[self.name]['sts_role']
+        else:
+            self.sts_role = None
+
+        # Connect to STS and assume the provided role
+        if not self.sts_role is None:
+            try:
+                stsconn = sts.connect_to_region(self.region,
+                                                profile_name=self.aws_profile)
+                assumed_role = stsconn.assume_role(role_arn=self.sts_role,
+                                                   role_session_name='cumulus')
+                self.aws_access_key_id = assumed_role.credentials.access_key
+                self.aws_secret_access_key = assumed_role.credentials.secret_key
+                self.aws_session_token = assumed_role.credentials.session_token
+                self.logger.info("Using STS credentials to set up stack, stack "
+                                 + "creation may fail if it takes longer than 1 hour")
+            except BotoServerError as e:
+                self.logger.critical("Could not assume STS role")
+                self.logger.critical(e.message)
+                exit(1)
+        else:
+            self.aws_access_key_id = None
+            self.aws_secret_access_key = None
+            self.aws_session_token = None
+
+        # Connect to an AWS service using proper credentials
+        def connect(service):
+            kwargs = {}
+            if not self.aws_access_key_id is None \
+                and not self.aws_secret_access_key is None:
+                # Using an STS assumed role
+                kwargs['aws_access_key_id'] = self.aws_access_key_id
+                kwargs['aws_secret_access_key'] = self.aws_secret_access_key
+                kwargs['security_token'] = self.aws_session_token
+            elif not self.aws_profile is None:
+                # Using an AWS profile
+                kwargs['profile_name'] = self.aws_profile
+            return service.connect_to_region(self.region, **kwargs)
+
         if 'account_id' in self.stackDict[self.name]:
             # Get the account ID for the current AWS credentials
-            iamconn = iam.connect_to_region(self.region)
+            iamconn = connect(iam)
             user_response = iamconn.get_user()['get_user_response']
             user_result = user_response['get_user_result']
             account_id = user_result['user']['arn'].split(':')[4]
@@ -79,7 +127,7 @@ class MegaStack(object):
         # currently in our region stops us making lots of calls to
         # CloudFormation API for each stack
         try:
-            self.cfconn = cloudformation.connect_to_region(self.region)
+            self.cfconn = connect(cloudformation)
             self.cf_desc_stacks = self._describe_all_stacks()
         except boto.exception.NoAuthHandlerFound as exception:
             self.logger.critical(
