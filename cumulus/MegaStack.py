@@ -168,7 +168,7 @@ class MegaStack(object):
                             name=stack_name,
                             params=the_stack.get('params'),
                             template_name=the_stack['cf_template'],
-                            region=self.region,
+                            cfconn=self.cfconn,
                             sns_topic_arn=local_sns_arn,
                             depends_on=the_stack.get('depends'),
                             tags=merged_tags
