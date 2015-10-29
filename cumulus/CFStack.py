@@ -4,7 +4,6 @@ CFStack module. Manages a single CloudFormation stack.
 import logging
 import simplejson
 from boto import cloudformation
-from cumulus.AWS import CloudFormation
 
 
 class CFStack(object):
@@ -303,3 +302,9 @@ class CFStack(object):
         Delete this stack in CloudFormation
         """
         self.cf_object.delete_stack(stack_name=self.cf_stack_name)
+
+    def update(self):
+        """
+        Update this stack in CloudFormation
+        """
+        self.cf_object.update_stack(stack_name=self.cf_stack_name)

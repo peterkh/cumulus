@@ -37,7 +37,7 @@ example-stack:
                 SSHLocation:
                     value: 0.0.0.0/0
                 InstanceType:
-                    value: t1.micro
+                    value: t2.micro
                 KeyName:
                     value: example
                 #This is where cumulus adds real value, dynamically get the value of the vpcId from example-stack

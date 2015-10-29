@@ -274,10 +274,10 @@ class MegaStack(object):
                 delete_result = self.watch_events(
                     stack.cf_stack_name, "DELETE_IN_PROGRESS")
                 if (delete_result != "DELETE_COMPLETE"
-                   and delete_result != "STACK_GONE"):
+                        and delete_result != "STACK_GONE"):
                     self.logger.critical(
-                        "Stack didn't delete correctly, status is now %s"
-                        % delete_result)
+                        "Stack didn't delete correctly, status is now %s",
+                        delete_result)
                     exit(1)
 
                 # CF told us stack completed ok. Log message to that effect and
