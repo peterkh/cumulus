@@ -73,7 +73,7 @@ class MegaStack(object):
         self.stack_objs = []
 
         # Get the names of the sub stacks from the yaml file and sort in array
-        self.cf_stacks = self.stackDict[self.name]['stacks'].keys()
+        self.cf_stacks = sorted(self.stackDict[self.name]['stacks'].keys())
 
         # Megastack holds the connection to CloudFormation and list of stacks
         # currently in our region stops us making lots of calls to
