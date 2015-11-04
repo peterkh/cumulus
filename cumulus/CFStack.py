@@ -47,16 +47,16 @@ class CFStack(object):
 
         try:
             # catch S3 url template names
-            m = re.match(r'(https?|s3)://([^/]+)/(.+$)', template_name)
+            m = re.match(r'(https?|s3)://([^/]+)/(.+$)', self.template_name)
             if m:
                 protocol, bucket, key = m.groups()
                 if protocol == 's3':
                     connet_s3().get_bucket(bucket).get_key(key).read()
                 else:
-                    if not requests.get(template_name).ok:
+                    if not requests.get(self.template_name).ok:
                         raise Exception
             else:
-                open(template_name, 'r')
+                open(self.template_name, 'r')
         except:
             self.logger.critical("Failed to open template file %s for stack %s"
                                  % (self.template_name, self.name))
@@ -213,13 +213,13 @@ class CFStack(object):
         Open and parse the json template for this stack
         """
         try:
-            m = re.match(r'(https?|s3)://([^/]+)/(.+$)', template_name)
+            m = re.match(r'(https?|s3)://([^/]+)/(.+$)', self.template_name)
             if m:
                 protocol, bucket, key = m.groups()
                 if protocol == 's3':
                     t = connet_s3().get_bucket(bucket).get_key(key).read()
                 else:
-                    t = requests.get(template_name).content
+                    t = requests.get(self.template_name).content
                 template = simplejson.loads(t)
             else:
                 template_file = open(self.template_name, 'r')
