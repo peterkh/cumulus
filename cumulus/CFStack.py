@@ -51,7 +51,7 @@ class CFStack(object):
             if m:
                 protocol, bucket, key = m.groups()
                 if protocol == 's3':
-                    connet_s3().get_bucket(bucket).get_key(key).read()
+                    connect_s3().get_bucket(bucket).get_key(key).read()
                 else:
                     if not requests.get(self.template_name).ok:
                         raise Exception
@@ -217,7 +217,7 @@ class CFStack(object):
             if m:
                 protocol, bucket, key = m.groups()
                 if protocol == 's3':
-                    t = connet_s3().get_bucket(bucket).get_key(key).read()
+                    t = connect_s3().get_bucket(bucket).get_key(key).read()
                 else:
                     t = requests.get(self.template_name).content
                 template = simplejson.loads(t)
