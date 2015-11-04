@@ -2,8 +2,11 @@
 CFStack module. Manages a single CloudFormation stack.
 """
 import logging
+import re
+import requests
 import simplejson
 from boto import cloudformation
+from boto import connect_s3
 
 
 class CFStack(object):
@@ -43,7 +46,17 @@ class CFStack(object):
             self.tags = tags
 
         try:
-            open(template_name, 'r')
+            # catch S3 url template names
+            m = re.match(r'(https?|s3)://([^/]+)/(.+$)', template_name):
+            if m:
+                protocol, bucket, key = m.groups()
+                if protocol == 's3':
+                    connet_s3().get_bucket(bucket).get_key(key).read()
+                else:
+                    if not requests.get(template_name).ok:
+                        raise Exception
+            else:
+                open(template_name, 'r')
         except:
             self.logger.critical("Failed to open template file %s for stack %s"
                                  % (self.template_name, self.name))
@@ -200,6 +213,15 @@ class CFStack(object):
         Open and parse the json template for this stack
         """
         try:
+            m = re.match(r'(https?|s3)://([^/]+)/(.+$)', template_name):
+            if m:
+                protocol, bucket, key = m.groups()
+                if protocol == 's3':
+                    t = connet_s3().get_bucket(bucket).get_key(key).read()
+                else:
+                    t = requests.get(template_name).content
+                template = simplejson.loads(t)
+            else:
             template_file = open(self.template_name, 'r')
             template = simplejson.load(template_file)
         except Exception as exception:
