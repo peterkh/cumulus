@@ -186,8 +186,8 @@ class CFStack(object):
                 if str(res.logical_resource_id) == var_name:
                     return str(res.physical_resource_id)
         else:
-            error_message = ("Error: invalid var_type passed to" +
-                             " get_value_from_cf, needs to be parameter, " +
+            error_message = ("Error: invalid var_type passed to"
+                             " get_value_from_cf, needs to be parameter, "
                              "resource or output. Not: %s")
             self.logger.critical(error_message, (var_type))
             exit(1)
@@ -271,8 +271,8 @@ class CFStack(object):
             key = param.key
             value = param.value
             if key not in self.params:
-                msg = ("New params are missing key %s that exists in CF for %s"
-                       + " stack already.")
+                msg = ("New params are missing key %s that exists in CF for "
+                       "%s stack already.")
                 self.logger.debug(msg, key, self.name)
                 return False
             # if the value of parameters are different, needs updating
@@ -286,9 +286,7 @@ class CFStack(object):
         return True
 
     def create(self):
-        """
-        Create this stack in CloudFormation
-        """
+        """Create this stack in CloudFormation."""
         self.cf_object.create_stack(
             stack_name=self.cf_stack_name,
             template_body=self.template_body,
@@ -298,13 +296,9 @@ class CFStack(object):
             )
 
     def delete(self):
-        """
-        Delete this stack in CloudFormation
-        """
+        """Delete this stack in CloudFormation."""
         self.cf_object.delete_stack(stack_name=self.cf_stack_name)
 
     def update(self):
-        """
-        Update this stack in CloudFormation
-        """
+        """Update this stack in CloudFormation."""
         self.cf_object.update_stack(stack_name=self.cf_stack_name)
