@@ -63,6 +63,7 @@ setup(
         'boto',
         'simplejson',
         'pystache',
+        're',
         'requests'
     ],
 
