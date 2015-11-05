@@ -27,6 +27,7 @@ class CFStack(object):
         self.params = {}
         self.template_name = template_name
         self.template_body = ''
+        self.template_url = False
         if depends_on is None:
             self.depends_on = None
         else:
@@ -221,9 +222,11 @@ class CFStack(object):
                 else:
                     t = requests.get(self.template_name).content
                 template = simplejson.loads(t)
+                template_url = self.template_name
             else:
                 template_file = open(self.template_name, 'r')
                 template = simplejson.load(template_file)
+                template_url = False
         except Exception as exception:
             self.logger.critical("Cannot parse %s template for stack %s."
                                  " Error: %s", self.template_name, self.name,
@@ -235,6 +238,7 @@ class CFStack(object):
             indent=2,
             separators=(',', ': '),
         )
+        self.template_url = template_url
         return True
 
     def template_uptodate(self, current_cf_stacks):

@@ -214,10 +214,13 @@ class MegaStack(object):
                 stack.read_template()
                 self.logger.info("Creating: %s, %s" % (
                     stack.cf_stack_name, stack.get_params_tuples()))
+                # prefer using the url if it is defined
+                template_body = None if stack.template_url else stack.template_body
                 try:
                     self.cfconn.create_stack(
                         stack_name=stack.cf_stack_name,
                         template_body=stack.template_body,
+                        template_url=stack.template_url,
                         parameters=stack.get_params_tuples(),
                         capabilities=['CAPABILITY_IAM'],
                         notification_arns=stack.sns_topic_arn,
@@ -329,17 +332,20 @@ class MegaStack(object):
                 self.logger.info(
                     "Starting update of stack %s with parameters: %s"
                     % (stack.name, stack.get_params_tuples()))
+                # prefer using the url if it is defined
+                template_body = None if stack.template_url else stack.template_body
                 self.cfconn.validate_template(
-                    template_body=stack.template_body)
+                    template_body=template_body,
+                    template_url=stack.template_url)
 
                 try:
                     self.cfconn.update_stack(
                         stack_name=stack.cf_stack_name,
-                        template_body=stack.template_body,
+                        template_body=template_body,
+                        template_url=stack.template_url,
                         parameters=stack.get_params_tuples(),
                         capabilities=['CAPABILITY_IAM'],
-                        tags=stack.tags,
-                    )
+                        tags=stack.tags)
                 except boto.exception.BotoServerError as exception:
                     try:
                         e_message_dict = simplejson.loads(exception[2])
