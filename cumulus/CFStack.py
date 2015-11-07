@@ -3,7 +3,6 @@ CFStack module. Manages a single CloudFormation stack.
 """
 import logging
 import simplejson
-from boto import cloudformation
 
 
 class CFStack(object):
@@ -142,28 +141,9 @@ class CFStack(object):
                 var_name=param_dict['variable'])
         else:
             error_message = ("Error in yaml file, can't parse parameter %s"
-                             + " for %s stack.")
+                             " for %s stack.")
             self.logger.critical(error_message, param_name, self.name)
             exit(1)
-
-    def get_cf_stack(self, stack, resources=False):
-        """
-        Get information on parameters, outputs and resources from a stack
-        and cache it
-        """
-        if not resources:
-            if stack not in self.cf_stacks:
-                # We don't have this stack in the cache already
-                # so we need to pull it from CF
-                cfconn = cloudformation.connect_to_region(self.region)
-                self.cf_stacks[stack] = cfconn.describe_stacks(stack)[0]
-            return self.cf_stacks[stack]
-        else:
-            if stack not in self.cf_stacks_resources:
-                cfconn = cloudformation.connect_to_region(self.region)
-                the_stack = self.get_cf_stack(stack=stack, resources=False)
-                self.cf_stacks_resources[stack] = the_stack.list_resources()
-            return self.cf_stacks_resources[stack]
 
     def get_value_from_cf(self, source_stack, var_type, var_name):
         """
@@ -172,25 +152,28 @@ class CFStack(object):
         If using resource, provide the logical ID and this will return the
         Physical ID
         """
-        the_stack = self.get_cf_stack(stack=source_stack)
-        if var_type == 'parameter':
-            for param in the_stack.parameters:
-                if str(param.key) == var_name:
-                    return str(param.value)
-        elif var_type == 'output':
-            for output in the_stack.outputs:
-                if str(output.key) == var_name:
-                    return str(output.value)
-        elif var_type == 'resource':
-            for res in self.get_cf_stack(stack=source_stack, resources=True):
-                if str(res.logical_resource_id) == var_name:
-                    return str(res.physical_resource_id)
+        if var_type == 'resource':
+            the_stack = self.cf_object.describe_stack(
+                source_stack, resources=True)
+            for res in the_stack['resources']:
+                if str(res['LogicalResourceId']) == var_name:
+                    return str(res['PhysicalResourceId'])
         else:
-            error_message = ("Error: invalid var_type passed to"
-                             " get_value_from_cf, needs to be parameter, "
-                             "resource or output. Not: %s")
-            self.logger.critical(error_message, (var_type))
-            exit(1)
+            the_stack = self.cf_object.describe_stack(source_stack)
+            if var_type == 'parameter':
+                for param in the_stack['Parameters']:
+                    if str(param['ParameterKey']) == var_name:
+                        return str(param['ParameterValue'])
+            elif var_type == 'output':
+                for output in the_stack['Outputs']:
+                    if str(output['OutputKey']) == var_name:
+                        return str(output['OutputValue'])
+            else:
+                error_message = ("Error: invalid var_type passed to"
+                                 " get_value_from_cf, needs to be parameter, "
+                                 "resource or output. Not: %s")
+                self.logger.critical(error_message, (var_type))
+                exit(1)
 
     def get_params_tuples(self):
         """

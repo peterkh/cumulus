@@ -8,6 +8,15 @@ import logging
 import cumulus.Exception
 
 
+class StackList(dict):
+    """Simple dict class that returns a dict as default for any key."""
+
+    def __missing__(self, key):
+        """If a key is missing, set and return a dict."""
+        self.__setitem__(key, {})
+        return self.__getitem__(key)
+
+
 class CloudFormation(object):
     """Preform actions on aws cloudformation API."""
 
@@ -40,7 +49,7 @@ class CloudFormation(object):
         self._refresh_stack_list()
 
         # Detailed stack dict, update per stack when needed
-        self.stacks = {}
+        self.stacks = StackList()
 
     def _list_stacks(self):
         """Get list of stacks from CloudFormation."""
@@ -53,6 +62,19 @@ class CloudFormation(object):
                 NextToken=response['NextToken'])
             stacks.extend(response['StackSummaries'])
         return stacks
+
+    def _list_stack_resources(self, stack_name):
+        """Get list of stack resources from CloudFormation."""
+        resources = []
+        response = self.conn.list_stack_resources(StackName=stack_name)
+        resources.extend(response['StackResourceSummaries'])
+        while 'NextToken' in response:
+            self.logger.info('Processing NextToken...')
+            response = self.conn.list_stack_resources(
+                StackName=stack_name,
+                NextToken=response['NextToken'])
+            resources.extend(response['StackResourceSummaries'])
+        return resources
 
     def _refresh_stack_list(self):
         """Update the stack summary cache from CloudFormation."""
@@ -79,6 +101,7 @@ class CloudFormation(object):
         self.stack_summaries_updated = False
         if stack_name in self.stacks:
             self.stacks[stack_name]['updated'] = False
+            self.stacks[stack_name]['resources_updated'] = False
 
     def exists(self, stack_name):
         """Check if stack exists in CloudFormation currently."""
@@ -92,19 +115,43 @@ class CloudFormation(object):
         else:
             return False
 
-    def describe_stack(self, stack_name):
+    def describe_stack(self, stack_name, resources=False):
         """Return stack details from CloudFormation."""
-        if self.exists(stack_name):
-            if stack_name in self.stacks:
-                if self.stacks[stack_name]['updated']:
-                    return self.stacks[stack_name]['details']
-            self.logger.info('Updating stack details for %s', stack_name)
-            details = self.conn.describe_stack(StackName=stack_name)
-            self.stacks[stack_name] = {'updated': True, 'details': details}
-            return self.stacks[stack_name]['details']
-        else:
+        if not self.exists(stack_name):
             raise cumulus.Exception.StackDoesNotExist(
-                'Can not retrieve details for no existant stack')
+                'Can not retrieve details for non-existant stack')
+
+        if self._details_uptodate(stack_name):
+            details = self.stacks[stack_name]['details']
+        else:
+            self.logger.info('Updating stack details for %s', stack_name)
+            details = self.conn.describe_stacks(StackName=stack_name)
+            self.stacks[stack_name]['details'] = details
+            self._details_updated(stack_name)
+
+        # If we request the resources and they arn't up to date,
+        # go get them
+        if resources and not self._resources_uptodate(stack_name):
+            details['resources'] = self._list_stack_resources(stack_name)
+            self.stacks[stack_name]['details'] = details
+            self._resources_updated(stack_name)
+        return details
+
+    def _details_uptodate(self, stack_name):
+        """Check if stack_name details are up to date in cache."""
+        return self.stacks[stack_name].get('updated', False)
+
+    def _resources_uptodate(self, stack_name):
+        """Check if stack_name resources are up to date in cache."""
+        return self.stacks[stack_name].get('resources_updated', False)
+
+    def _details_updated(self, stack_name):
+        """Mark stack_name details as up to date in cache."""
+        self.stacks[stack_name]['updated'] = True
+
+    def _resources_updated(self, stack_name):
+        """Mark stack_name resources as up to date in cache."""
+        self.stacks[stack_name]['resources_updated'] = True
 
     def create_stack(self, stack_name, template_body, parameters,
                      tags, notification_arns=None):
