@@ -175,7 +175,7 @@ class MegaStack(object):
             if stack_name and stack.name != stack_name:
                 continue
             self.logger.info("Starting check of stack %s" % stack.name)
-            if not stack.populate_params(self.cf_desc_stacks):
+            if not stack.populate_params():
                 info_message = ("Could not determine correct parameters for" +
                                 "CloudFormation stack %s\n\tMost likely " +
                                 "because stacks it depends on haven't been " +
@@ -212,7 +212,7 @@ class MegaStack(object):
                                          " and they should be, exiting...",
                                          stack.name)
                     exit(1)
-                if not stack.populate_params(self.cf_desc_stacks):
+                if not stack.populate_params():
                     self.logger.critical("Could not determine correct "
                                          "parameters for stack %s",
                                          stack.name)
@@ -307,7 +307,7 @@ class MegaStack(object):
                     "Dependencies for stack %s not met and they should be,"
                     " exiting..." % stack.name)
                 exit(1)
-            if not stack.populate_params(self.cf_desc_stacks):
+            if not stack.populate_params():
                 self.logger.critical("Could not determine correct parameters"
                                      " for stack %s" % stack.name)
                 exit(1)

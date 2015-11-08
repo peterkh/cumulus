@@ -36,7 +36,18 @@ class CloudFormation(object):
                        'UPDATE_ROLLBACK_FAILED',
                        'UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS',
                        'UPDATE_ROLLBACK_COMPLETE', ]
+    # Status for deleted stacks
     DELETED_STATUS = ['DELETE_COMPLETE']
+    # Status for a valid existing stack (can I depend on it)
+    VALID_STATUS = ['CREATE_COMPLETE',
+                    'ROLLBACK_IN_PROGRESS',
+                    'ROLLBACK_COMPLETE',
+                    'UPDATE_IN_PROGRESS',
+                    'UPDATE_COMPLETE_CLEANUP_IN_PROGRESS',
+                    'UPDATE_COMPLETE',
+                    'UPDATE_ROLLBACK_IN_PROGRESS',
+                    'UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS',
+                    'UPDATE_ROLLBACK_COMPLETE', ]
 
     def __init__(self, region):
         """Set connection to CloudFomration API."""
@@ -51,6 +62,10 @@ class CloudFormation(object):
         # Detailed stack dict, update per stack when needed
         self.stacks = StackList()
 
+    def existing_valid_status(self):
+        """Return a list of stack status strings for existing stacks"""
+        return self.VALID_STATUS
+
     def _list_stacks(self):
         """Get list of stacks from CloudFormation."""
         stacks = []
@@ -62,6 +77,14 @@ class CloudFormation(object):
                 NextToken=response['NextToken'])
             stacks.extend(response['StackSummaries'])
         return stacks
+
+    def list_existing_stacks(self):
+        """Get stack list from CloudFormation if not already updated."""
+        if not self.stack_summaries_updated:
+            self._refresh_stack_list()
+        return {stack: props for stack, props in
+                self.stack_summaries.iteritems()
+                if props['status'] in self.VALID_STATUS}
 
     def _list_stack_resources(self, stack_name):
         """Get list of stack resources from CloudFormation."""

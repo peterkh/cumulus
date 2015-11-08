@@ -65,7 +65,7 @@ class CFStack(object):
         self.cf_stacks = {}
         self.cf_stacks_resources = {}
 
-    def deps_met(self, current_cf_stacks):
+    def _deps_met(self):
         """
         Check whether stacks we depend on exist in CloudFormation
         """
@@ -75,8 +75,9 @@ class CFStack(object):
             for dep in self.depends_on:
                 dep_met = False
                 # check CF if stack we depend on has been created successfully
-                for stack in current_cf_stacks:
-                    if str(stack.stack_name) == dep:
+                existing_stacks = self.cf_object.list_existing_stacks()
+                for stack in existing_stacks:
+                    if stack == dep:
                         dep_met = True
                 if not dep_met:
                     return False
@@ -86,12 +87,15 @@ class CFStack(object):
         """
         Check if this stack exists in CloudFormation
         """
+        # TODO: Major change needed here
+        #if self.cf_stack_name in self.cf_object.list_existing_stacks():
+        #    return True
         for stack in current_cf_stacks:
             if str(stack.stack_name) == self.cf_stack_name:
                 return stack
         return False
 
-    def populate_params(self, current_cf_stacks):
+    def populate_params(self):
         """
         Populate the parameter list for this stack
         """
@@ -100,7 +104,7 @@ class CFStack(object):
         if self.yaml_params is None:
             self.params = {}
             return True
-        if self.deps_met(current_cf_stacks):
+        if self._deps_met():
             for param_name, param_val in self.yaml_params.iteritems():
                 if type(param_val) is dict:
                     self.params[param_name] = self._parse_param(
