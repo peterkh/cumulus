@@ -62,10 +62,6 @@ class CloudFormation(object):
         # Detailed stack dict, update per stack when needed
         self.stacks = StackList()
 
-    def existing_valid_status(self):
-        """Return a list of stack status strings for existing stacks"""
-        return self.VALID_STATUS
-
     def _list_stacks(self):
         """Get list of stacks from CloudFormation."""
         stacks = []
@@ -137,6 +133,14 @@ class CloudFormation(object):
                 return True
         else:
             return False
+
+    def get_stack_status(self, stack_name):
+        """Get the status of a stack in CloudFormation."""
+        if self.exists(stack_name):
+            return {stack_name: self.stack_summaries[stack_name]}
+        else:
+            raise cumulus.Exception.StackDoesNotExist(
+                'Can not retrieve status for non-existant stack')
 
     def describe_stack(self, stack_name, resources=False):
         """Return stack details from CloudFormation."""

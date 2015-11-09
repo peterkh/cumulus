@@ -188,8 +188,7 @@ class MegaStack(object):
                                     stack.get_params_tuples()))
                 self.logger.info("Stack %s already exists in CF: %s"
                                  % (stack.cf_stack_name,
-                                    bool(stack.exists_in_cf(
-                                         self.cf_desc_stacks))))
+                                    stack.exists()))
 
     def create(self, stack_name=None):
         """
@@ -203,11 +202,11 @@ class MegaStack(object):
 
             self.logger.info("Starting checks for creation of stack: %s",
                              stack.name)
-            if stack.exists_in_cf(self.cf_desc_stacks):
+            if stack.exists():
                 self.logger.info("Stack %s already exists in CloudFormation,"
                                  " skipping", stack.name)
             else:
-                if stack.deps_met(self.cf_desc_stacks) is False:
+                if stack.deps_met() is False:
                     self.logger.critical("Dependancies for stack %s not met"
                                          " and they should be, exiting...",
                                          stack.name)
@@ -257,7 +256,7 @@ class MegaStack(object):
                 continue
             self.logger.info("Starting checks for deletion of stack: %s"
                              % stack.name)
-            if not stack.exists_in_cf(self.cf_desc_stacks):
+            if not stack.exists():
                 self.logger.info(
                     "Stack %s doesn't exist in CloudFormation, skipping"
                     % stack.name)
@@ -297,12 +296,12 @@ class MegaStack(object):
                 continue
             self.logger.info("Starting checks for update of stack: %s"
                              % stack.name)
-            if not stack.exists_in_cf(self.cf_desc_stacks):
+            if not stack.exists():
                 self.logger.critical(
                     "Stack %s doesn't exist in cloudformation, can't update"
                     " something that doesn't exist." % stack.name)
                 exit(1)
-            if not stack.deps_met(self.cf_desc_stacks):
+            if not stack.deps_met():
                 self.logger.critical(
                     "Dependencies for stack %s not met and they should be,"
                     " exiting..." % stack.name)
@@ -386,25 +385,24 @@ class MegaStack(object):
                 "No stack name passed in, nothing to watch... use -s to "
                 "provide stack name.")
             exit(1)
-        the_stack = False
+        the_stack = None
         for stack in self.stack_objs:
             if stack_name == stack.name:
                 the_stack = stack
         if not the_stack:
-            self.logger.error("Cannot find stack %s to watch" % stack_name)
+            self.logger.error("Cannot find stack %s to watch", stack_name)
             return False
-        the_cf_stack = the_stack.exists_in_cf(self.cf_desc_stacks)
-        if not the_cf_stack:
+        if not the_stack.exists():
             self.logger.error(
                 "Stack %s doesn't exist in CloudFormation, can't watch "
-                "something that doesn't exist." % stack_name)
+                "something that doesn't exist.", stack_name)
             return False
-
+        cf_stack_status = the_stack.cf_details()[the_stack.cf_stack_name]['status']
         self.logger.info(
-            "Watching stack %s, while in state %s."
-            % (the_stack.cf_stack_name, str(the_cf_stack.stack_status)))
+            "Watching stack %s, while in state %s.",
+            the_stack.cf_stack_name, cf_stack_status)
         self.watch_events(
-            the_stack.cf_stack_name, str(the_cf_stack.stack_status))
+            the_stack.cf_stack_name, cf_stack_status)
 
     def watch_events(self, stack_name, while_status):
         """
