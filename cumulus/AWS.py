@@ -121,6 +121,7 @@ class CloudFormation(object):
         if stack_name in self.stacks:
             self.stacks[stack_name]['updated'] = False
             self.stacks[stack_name]['resources_updated'] = False
+            self.stacks[stack_name]['template_updated'] = False
 
     def exists(self, stack_name):
         """Check if stack exists in CloudFormation currently."""
@@ -152,7 +153,8 @@ class CloudFormation(object):
             details = self.stacks[stack_name]['details']
         else:
             self.logger.info('Updating stack details for %s', stack_name)
-            details = self.conn.describe_stacks(StackName=stack_name)
+            details = self.conn.describe_stacks(
+                StackName=stack_name)['Stacks'][0]
             self.stacks[stack_name]['details'] = details
             self._details_updated(stack_name)
 
@@ -164,6 +166,20 @@ class CloudFormation(object):
             self._resources_updated(stack_name)
         return details
 
+    def get_template(self, stack_name):
+        """Return json template for CloudFormation stack."""
+        if not self.exists(stack_name):
+            raise cumulus.Exception.StackDoesNotExist(
+                'Can not retrieve details for non-existant stack')
+
+        if self._template_uptodate(stack_name):
+            return self.stacks[stack_name]['template']
+        else:
+            self.logger.info('Downloading stack template from CloudFormation'
+                             ' for %s', stack_name)
+            response = self.conn.get_template(StackName=stack_name)
+            return response['TemplateBody']
+
     def _details_uptodate(self, stack_name):
         """Check if stack_name details are up to date in cache."""
         return self.stacks[stack_name].get('updated', False)
@@ -172,6 +188,10 @@ class CloudFormation(object):
         """Check if stack_name resources are up to date in cache."""
         return self.stacks[stack_name].get('resources_updated', False)
 
+    def _template_uptodate(self, stack_name):
+        """Check if stack_name template is up to date in cache."""
+        return self.stacks[stack_name].get('template_updated', False)
+
     def _details_updated(self, stack_name):
         """Mark stack_name details as up to date in cache."""
         self.stacks[stack_name]['updated'] = True
@@ -179,6 +199,10 @@ class CloudFormation(object):
     def _resources_updated(self, stack_name):
         """Mark stack_name resources as up to date in cache."""
         self.stacks[stack_name]['resources_updated'] = True
+
+    def _template_updated(self, stack_name):
+        """Mark stack_name template as up to date in cache."""
+        self.stacks[stack_name]['template_updated'] = True
 
     def create_stack(self, stack_name, template_body, parameters,
                      tags, notification_arns=None):

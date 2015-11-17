@@ -84,7 +84,6 @@ class MegaStack(object):
         # CloudFormation API for each stack
         try:
             self.cfconn = cloudformation.connect_to_region(self.region)
-            self.cf_desc_stacks = self._describe_all_stacks()
         except boto.exception.NoAuthHandlerFound as exception:
             self.logger.critical(
                 "No credentials found for connecting to CloudFormation: %s"
@@ -242,7 +241,6 @@ class MegaStack(object):
                 # objects in CF
                 self.logger.info("Finished creating stack: %s"
                                  % stack.cf_stack_name)
-                self.cf_desc_stacks = self._describe_all_stacks()
 
     def delete(self, stack_name=None):
         """
@@ -283,7 +281,6 @@ class MegaStack(object):
                 # refresh the list of stack objects in CF
                 self.logger.info("Finished deleting stack: %s"
                                  % stack.cf_stack_name)
-                self.cf_desc_stacks = self._describe_all_stacks()
 
     def update(self, stack_name=None):
         """
@@ -311,8 +308,8 @@ class MegaStack(object):
                                      " for stack %s" % stack.name)
                 exit(1)
             stack.read_template()
-            template_up_to_date = stack.template_uptodate(self.cf_desc_stacks)
-            params_up_to_date = stack.params_uptodate(self.cf_desc_stacks)
+            template_up_to_date = stack.template_uptodate()
+            params_up_to_date = stack.params_uptodate()
             self.logger.debug("Stack is up to date: %s"
                               % (template_up_to_date and params_up_to_date))
             if template_up_to_date and params_up_to_date:
@@ -323,9 +320,6 @@ class MegaStack(object):
                 if not template_up_to_date:
                     self.logger.info(
                         "Template for stack %s has changed." % stack.name)
-                    # Would like to get this working. Tried datadiff but can't
-                    # stop it from printing whole template
-                    # stack.print_template_diff(self.cf_desc_stacks)
                 self.logger.info(
                     "Starting update of stack %s with parameters: %s"
                     % (stack.name, stack.get_params_tuples()))
@@ -497,29 +491,16 @@ class MegaStack(object):
                         event.resource_status_reason,
                     ))
                 else:
-                    self.logger.info("%s %s %s %s %s %s" % (
-                        event.timestamp.isoformat(),
-                        event.resource_status,
-                        event.resource_type,
-                        event.logical_resource_id,
-                        event.physical_resource_id,
-                        event.resource_status_reason,
-                    ))
+                    self.logger.info("%s %s %s %s %s %s",
+                                     event.timestamp.isoformat(),
+                                     event.resource_status,
+                                     event.resource_type,
+                                     event.logical_resource_id,
+                                     event.physical_resource_id,
+                                     event.resource_status_reason)
             if count > 0:
                 events = new_events[:]
             cfstack_obj.update()
             status = str(cfstack_obj.stack_status)
             time.sleep(5)
         return status
-
-    def _describe_all_stacks(self):
-        """
-        Get all pages of stacks from describe_stacks API call.
-        """
-        result = []
-        resp = self.cfconn.describe_stacks()
-        result.extend(resp)
-        while resp.next_token:
-            resp = self.cfconn.describe_stacks(next_token=resp.next_token)
-            result.extend(resp)
-        return result

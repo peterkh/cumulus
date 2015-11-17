@@ -91,23 +91,8 @@ class CFStack(object):
         """Return the stack name from CloudFormation and current state."""
         return self.cf_object.get_stack_status(self.cf_stack_name)
 
-    # Time for this to go
-    def exists_in_cf(self, current_cf_stacks):
-        """
-        Check if this stack exists in CloudFormation
-        """
-        # TODO: Major change needed here
-        #if self.cf_stack_name in self.cf_object.list_existing_stacks():
-        #    return True
-        for stack in current_cf_stacks:
-            if str(stack.stack_name) == self.cf_stack_name:
-                return stack
-        return False
-
     def populate_params(self):
-        """
-        Populate the parameter list for this stack
-        """
+        """Populate the parameter list for this stack."""
         # If we have no parameters in the yaml file,
         # set params to an empty dict and return true
         if self.yaml_params is None:
@@ -189,9 +174,7 @@ class CFStack(object):
                 exit(1)
 
     def get_params_tuples(self):
-        """
-        Convert param dict to array of tuples needed by boto
-        """
+        """Convert param dict to array of tuples needed by boto."""
         tuple_list = []
         if len(self.params) > 0:
             for param in self.params.keys():
@@ -199,9 +182,7 @@ class CFStack(object):
         return tuple_list
 
     def get_params_boto3(self):
-        """
-        Convert param dict to array of tuples needed by boto3
-        """
+        """Convert param dict to array of tuples needed by boto3."""
         param_list = []
         for param in self.params.keys():
             param_list.append({
@@ -210,11 +191,8 @@ class CFStack(object):
 
         return param_list
 
-
     def read_template(self):
-        """
-        Open and parse the json template for this stack
-        """
+        """Open and parse the json template for this stack."""
         try:
             template_file = open(self.template_name, 'r')
             template = simplejson.load(template_file)
@@ -231,41 +209,35 @@ class CFStack(object):
         )
         return True
 
-    def template_uptodate(self, current_cf_stacks):
+    def template_uptodate(self):
         """
         Check if stack is up to date with cloudformation.
+
         Returns true if template matches what's in cloudformation,
         false if not or stack not found.
         """
-        cf_stack = self.exists_in_cf(current_cf_stacks)
-        if cf_stack:
-            cf_temp_res = cf_stack.get_template()['GetTemplateResponse']
-            cf_temp_body = cf_temp_res['GetTemplateResult']['TemplateBody']
-            cf_temp_dict = simplejson.loads(cf_temp_body)
-            if cf_temp_dict == simplejson.loads(self.template_body):
-                return True
+        cf_temp_dict = self.cf_object.get_template(self.cf_stack_name)
+        if cf_temp_dict == simplejson.loads(self.template_body):
+            return True
         return False
 
-    def params_uptodate(self, current_cf_stacks):
-        """
-        Check if parameters in stack are up to date with Cloudformation
-        """
-        cf_stack = self.exists_in_cf(current_cf_stacks)
-        if not cf_stack:
-            return False
+    def params_uptodate(self):
+        """Check if parameters in stack are up to date with Cloudformation."""
+        stack_details = self.cf_object.describe_stack(self.cf_stack_name)
+        parameters = stack_details.get('Parameters', [])
 
         # If number of params in CF and this stack obj dont match,
         # then it needs updating
-        if len(cf_stack.parameters) != len(self.params):
-            msg = "New and old parameter lists are different lengths for %s"
-            self.logger.debug(msg, self.name)
+        if len(parameters) != len(self.params):
+            self.logger.debug("New and old parameter lists are different "
+                              "lengths for %s", self.name)
             return False
 
-        for param in cf_stack.parameters:
+        for param in parameters:
             # check if param in CF exists in our new parameter set,
             # if not they are differenet and need updating
-            key = param.key
-            value = param.value
+            key = param['ParameterKey']
+            value = param['ParameterValue']
             if key not in self.params:
                 msg = ("New params are missing key %s that exists in CF for "
                        "%s stack already.")
