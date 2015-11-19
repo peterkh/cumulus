@@ -323,17 +323,9 @@ class MegaStack(object):
                 self.logger.info(
                     "Starting update of stack %s with parameters: %s"
                     % (stack.name, stack.get_params_tuples()))
-                self.cfconn.validate_template(
-                    template_body=stack.template_body)
 
                 try:
-                    self.cfconn.update_stack(
-                        stack_name=stack.cf_stack_name,
-                        template_body=stack.template_body,
-                        parameters=stack.get_params_tuples(),
-                        capabilities=['CAPABILITY_IAM'],
-                        tags=stack.tags,
-                    )
+                    stack.update()
                 except boto.exception.BotoServerError as exception:
                     try:
                         e_message_dict = simplejson.loads(exception[2])

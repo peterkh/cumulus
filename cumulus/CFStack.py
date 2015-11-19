@@ -269,4 +269,8 @@ class CFStack(object):
 
     def update(self):
         """Update this stack in CloudFormation."""
-        self.cf_object.update_stack(stack_name=self.cf_stack_name)
+        self.cf_object.update_stack(
+            StackName=self.cf_stack_name,
+            TemplateBody=self.template_body,
+            Parameters=self.get_params_boto3(),
+            Capabilities=['CAPABILITY_IAM'])
