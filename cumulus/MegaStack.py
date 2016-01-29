@@ -171,7 +171,7 @@ class MegaStack(object):
                 continue
             self.logger.info("Starting check of stack %s" % stack.name)
             if not stack.populate_params(self.cf_desc_stacks):
-                info_message = ("Could not determine correct parameters for" +
+                info_message = ("Could not determine correct parameters for " +
                                 "CloudFormation stack %s\n\tMost likely " +
                                 "because stacks it depends on haven't been " +
                                 "created yet.")
