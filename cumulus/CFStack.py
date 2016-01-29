@@ -12,7 +12,7 @@ class CFStack(object):
     region, template and what other stacks it depends on.
     """
     def __init__(self, mega_stack_name, name, params, template_name, region,
-                 sns_topic_arn, tags=None, depends_on=None):
+                 key_profile, sns_topic_arn, tags=None, depends_on=None):
         self.logger = logging.getLogger(__name__)
         if mega_stack_name == name:
             self.cf_stack_name = name
@@ -33,6 +33,7 @@ class CFStack(object):
                     self.depends_on.append(dep)
                 else:
                     self.depends_on.append("%s-%s" % (mega_stack_name, dep))
+        self.key_profile = key_profile
         self.region = region
         self.sns_topic_arn = sns_topic_arn
 
@@ -148,12 +149,24 @@ class CFStack(object):
             if stack not in self.cf_stacks:
                 # We don't have this stack in the cache already
                 # so we need to pull it from CF
-                cfconn = cloudformation.connect_to_region(self.region)
+                if self.key_profile is not None:
+                    cfconn = cloudformation.connect_to_region(
+                        self.region,
+                        profile_name=self.key_profile,
+                    )
+                else:
+                    cfconn = cloudformation.connect_to_region(self.region)
                 self.cf_stacks[stack] = cfconn.describe_stacks(stack)[0]
             return self.cf_stacks[stack]
         else:
             if stack not in self.cf_stacks_resources:
-                cfconn = cloudformation.connect_to_region(self.region)
+                if self.key_profile is not None:
+                    cfconn = cloudformation.connect_to_region(
+                        self.region,
+                        profile_name=self.key_profile,
+                    )
+                else:
+                    cfconn = cloudformation.connect_to_region(self.region)
                 the_stack = self.get_cf_stack(stack=stack, resources=False)
                 self.cf_stacks_resources[stack] = the_stack.list_resources()
             return self.cf_stacks_resources[stack]

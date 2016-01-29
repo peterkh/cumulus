@@ -14,6 +14,7 @@ example-stack:
     highlight-output: true
     #Limit the account in which this stack can be run
     account_id: 972549067366
+    key_profile: prod
     stacks:
         #Base stack, has the same name as the top level. Cumulus knows not to call it examplestack-example-stack.
         #This template has no parameters to pass in

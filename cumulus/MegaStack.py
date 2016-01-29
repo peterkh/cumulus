@@ -46,9 +46,22 @@ class MegaStack(object):
                                  " don't know where to build it.")
             exit(1)
 
+        # Find and set the mega stacks key profile. Use None if it has not been
+        # defined in the stack
+        if 'key_profile' in self.stackDict[self.name]:
+            self.key_profile = self.stackDict[self.name]['key_profile']
+        else:
+            self.key_profile = None
+
         if 'account_id' in self.stackDict[self.name]:
             # Get the account ID for the current AWS credentials
-            iamconn = iam.connect_to_region(self.region)
+            if self.key_profile is not None:
+                iamconn = iam.connect_to_region(
+                    self.region,
+                    profile_name=self.key_profile,
+                )
+            else:
+                iamconn = iam.connect_to_region(self.region)
             user_response = iamconn.get_user()['get_user_response']
             user_result = user_response['get_user_result']
             account_id = user_result['user']['arn'].split(':')[4]
@@ -79,7 +92,13 @@ class MegaStack(object):
         # currently in our region stops us making lots of calls to
         # CloudFormation API for each stack
         try:
-            self.cfconn = cloudformation.connect_to_region(self.region)
+            if self.key_profile is not None:
+                self.cfconn = cloudformation.connect_to_region(
+                    self.region,
+                    profile_name=self.key_profile,
+                )
+            else:
+                self.cfconn = cloudformation.connect_to_region(self.region)
             self.cf_desc_stacks = self._describe_all_stacks()
         except boto.exception.NoAuthHandlerFound as exception:
             self.logger.critical(
@@ -120,6 +139,7 @@ class MegaStack(object):
                             params=the_stack.get('params'),
                             template_name=the_stack['cf_template'],
                             region=self.region,
+                            key_profile=self.key_profile,
                             sns_topic_arn=local_sns_arn,
                             depends_on=the_stack.get('depends'),
                             tags=merged_tags
