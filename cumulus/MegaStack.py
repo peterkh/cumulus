@@ -29,8 +29,8 @@ class MegaStack(object):
         self.stackDict = yaml.safe_load(rendered_file)
         # Make sure there is only one top level element in the yaml file
         if len(self.stackDict.keys()) != 1:
-            error_message = ("Need one and only one mega stack name at the"
-                             + " top level, found %s")
+            error_message = ("Need one and only one mega stack name at the" +
+                             " top level, found %s")
             self.logger.critical(error_message % len(self.stackDict.keys()))
             exit(1)
 
@@ -42,8 +42,8 @@ class MegaStack(object):
         if 'region' in self.stackDict[self.name]:
             self.region = self.stackDict[self.name]['region']
         else:
-            self.logger.critical("No region specified for mega stack,"
-                                 + " don't know where to build it.")
+            self.logger.critical("No region specified for mega stack," +
+                                 " don't know where to build it.")
             exit(1)
 
         if 'account_id' in self.stackDict[self.name]:
@@ -55,8 +55,8 @@ class MegaStack(object):
 
             # Check if the current account ID matches the stack's account ID
             if account_id != str(self.stackDict[self.name]['account_id']):
-                self.logger.critical("Account ID of stack does not match the"
-                                     + " account ID of your AWS credentials.")
+                self.logger.critical("Account ID of stack does not match the" +
+                                     " account ID of your AWS credentials.")
                 exit(1)
 
         self.sns_topic_arn = self.stackDict[self.name].get('sns-topic-arn', [])
@@ -93,8 +93,8 @@ class MegaStack(object):
             the_stack = self.stackDict[self.name]['stacks'][stack_name]
             if type(the_stack) is dict:
                 if the_stack.get('disable', False):
-                    warn_message = ("Stack %s is disabled by configuration"
-                                    + " directive. Skipping")
+                    warn_message = ("Stack %s is disabled by configuration" +
+                                    " directive. Skipping")
                     self.logger.warning(warn_message % stack_name)
                     continue
                 local_sns_arn = the_stack.get('sns-topic-arn',
@@ -108,8 +108,8 @@ class MegaStack(object):
                                              % (topic, self.region))
                         exit(1)
                 local_tags = the_stack.get('tags', {})
-                merged_tags = dict(self.global_tags.items()
-                                   + local_tags.items())
+                merged_tags = dict(self.global_tags.items() +
+                                   local_tags.items())
                 # Add static cumulus-stack tag
                 merged_tags['cumulus-stack'] = self.name
                 if 'cf_template' in the_stack:
@@ -272,8 +272,8 @@ class MegaStack(object):
                 self.cfconn.delete_stack(stack.cf_stack_name)
                 delete_result = self.watch_events(
                     stack.cf_stack_name, "DELETE_IN_PROGRESS")
-                if (delete_result != "DELETE_COMPLETE"
-                   and delete_result != "STACK_GONE"):
+                if (delete_result != "DELETE_COMPLETE" and
+                   delete_result != "STACK_GONE"):
                     self.logger.critical(
                         "Stack didn't delete correctly, status is now %s"
                         % delete_result)
@@ -414,8 +414,8 @@ class MegaStack(object):
             cfstack_obj = self.cfconn.describe_stacks(stack_name)[0]
             events = list(self.cfconn.describe_stack_events(stack_name))
         except boto.exception.BotoServerError as exception:
-            if (str(exception.error_message)
-               == "Stack:%s does not exist" % (stack_name)):
+            if (str(exception.error_message) ==
+               "Stack:%s does not exist" % (stack_name)):
                 return "STACK_GONE"
 
         colors = {
@@ -481,9 +481,9 @@ class MegaStack(object):
                     return "STACK_GONE"
             count = 0
             events_to_log = []
-            while (events[0].timestamp != new_events[count].timestamp
-                   or events[0].logical_resource_id
-                    != new_events[count].logical_resource_id):
+            while (events[0].timestamp != new_events[count].timestamp or
+                   events[0].logical_resource_id !=
+                   new_events[count].logical_resource_id):
                 events_to_log.insert(0, new_events[count])
                 count += 1
             for event in events_to_log:

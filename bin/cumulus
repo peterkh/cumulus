@@ -17,12 +17,11 @@ limitations under the License."""
 
 import sys
 from os.path import dirname, abspath
+from cumulus import main
 
 # Add one directory up to python path, so it can find cumulus package
 BIN_DIR = dirname(abspath(__file__))
 ROOT_DIR = dirname(BIN_DIR)
 sys.path.insert(0, ROOT_DIR)
-
-from cumulus import main
 
 main()

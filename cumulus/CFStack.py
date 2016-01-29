@@ -121,9 +121,9 @@ class CFStack(object):
             return str(param_dict['value'])
         # No static value set, but if we have a source,
         # type and variable can try getting from CF
-        elif ('source' in param_dict
-              and 'type' in param_dict
-              and 'variable' in param_dict):
+        elif ('source' in param_dict and
+              'type' in param_dict and
+              'variable' in param_dict):
             if param_dict['source'] == self.mega_stack_name:
                 source_stack = param_dict['source']
             else:
@@ -134,8 +134,8 @@ class CFStack(object):
                 var_type=param_dict['type'],
                 var_name=param_dict['variable'])
         else:
-            error_message = ("Error in yaml file, can't parse parameter %s"
-                             + " for %s stack.")
+            error_message = ("Error in yaml file, can't parse parameter %s" +
+                             " for %s stack.")
             self.logger.critical(error_message, param_name, self.name)
             exit(1)
 
@@ -251,8 +251,8 @@ class CFStack(object):
             key = param.key
             value = param.value
             if key not in self.params:
-                msg = ("New params are missing key %s that exists in CF for %s"
-                       + " stack already.")
+                msg = ("New params are missing key %s that exists in CF " +
+                       "for %s stack already.")
                 self.logger.debug(msg, key, self.name)
                 return False
             # if the value of parameters are different, needs updating
