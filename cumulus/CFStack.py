@@ -2,8 +2,11 @@
 CFStack module. Manages a single CloudFormation stack.
 """
 import logging
+import re
+import requests
 import simplejson
 from boto import cloudformation
+from boto import connect_s3
 
 
 class CFStack(object):
@@ -24,6 +27,7 @@ class CFStack(object):
         self.params = {}
         self.template_name = template_name
         self.template_body = ''
+        self.template_url = False
         if depends_on is None:
             self.depends_on = None
         else:
@@ -43,7 +47,17 @@ class CFStack(object):
             self.tags = tags
 
         try:
-            open(template_name, 'r')
+            # catch S3 url template names
+            m = re.match(r'(https?|s3)://([^/]+)/(.+$)', self.template_name)
+            if m:
+                protocol, bucket, key = m.groups()
+                if protocol == 's3':
+                    connect_s3().get_bucket(bucket).get_key(key).read()
+                else:
+                    if not requests.get(self.template_name).ok:
+                        raise Exception
+            else:
+                open(self.template_name, 'r')
         except:
             self.logger.critical("Failed to open template file %s for stack %s"
                                  % (self.template_name, self.name))
@@ -200,8 +214,19 @@ class CFStack(object):
         Open and parse the json template for this stack
         """
         try:
-            template_file = open(self.template_name, 'r')
-            template = simplejson.load(template_file)
+            m = re.match(r'(https?|s3)://([^/]+)/(.+$)', self.template_name)
+            if m:
+                protocol, bucket, key = m.groups()
+                if protocol == 's3':
+                    t = connect_s3().get_bucket(bucket).get_key(key).read()
+                else:
+                    t = requests.get(self.template_name).content
+                template = simplejson.loads(t)
+                template_url = self.template_name
+            else:
+                template_file = open(self.template_name, 'r')
+                template = simplejson.load(template_file)
+                template_url = False
         except Exception as exception:
             self.logger.critical("Cannot parse %s template for stack %s."
                                  " Error: %s", self.template_name, self.name,
@@ -213,6 +238,7 @@ class CFStack(object):
             indent=2,
             separators=(',', ': '),
         )
+        self.template_url = template_url
         return True
 
     def template_uptodate(self, current_cf_stacks):
