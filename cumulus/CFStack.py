@@ -6,6 +6,9 @@ import simplejson
 import yaml
 import os
 import boto
+import datetime
+import operator
+import pytz
 from boto import cloudformation
 from boto.exception import S3ResponseError
 
@@ -133,6 +136,8 @@ class CFStack(object):
         # Read value from S3 key
         elif 'value_s3' in param_dict:
             return self.get_value_from_s3(uri=param_dict['value_s3'], param=param_name)
+        elif 'value_cron_timezone' in param_dict:
+            return self.convert_timezone_string_to_gmt(param_dict['value_cron_timezone'])
         # No static value set, but if we have a source,
         # type and variable can try getting from CF
         elif ('source' in param_dict
@@ -152,6 +157,50 @@ class CFStack(object):
                              + " for %s stack.")
             self.logger.critical(error_message, param_name, self.name)
             exit(1)
+
+    def convert_timezone_string_to_gmt(self, cron_string):
+        timezone, minute, hour, dom, month, dow = cron_string.split(' ')
+        try:
+            if (dom + month + dow) != '***':
+                self.logger.critical("Use of dom, month and dow currently unsupported, use *")
+                exit(1)
+            int(minute) + int(hour)
+        except ValueError:
+            self.logger.critical("Please use only integers for cron hour and minute")
+            exit(1)
+        utcnow = datetime.datetime.utcnow()
+        tz = pytz.timezone(timezone)
+        offset = tz.localize(utcnow, is_dst=False).strftime('%z')
+        offset_direction = offset[0]
+        offset_hours = offset[1:3]
+        offset_minutes = offset[-2:]
+
+        ops = {'+': operator.sub,
+               '-': operator.add}
+        op_func = ops[offset_direction]
+
+        # transform minutes
+        z = op_func(int(minute), int(offset_minutes))
+        if z > 60:
+            new_minute = z - 60
+            hour_offset = 1
+        elif z < 0:
+            new_minute = z + 60
+            hour_offset = -1
+        else:
+            new_minute = z
+            hour_offset = 0
+
+        # transform hours
+        z = op_func((int(hour) + int(hour_offset)), int(offset_hours))
+        if z > 24:
+            new_hour = z - 24
+        elif z < 0:
+            new_hour = z + 24
+        else:
+            new_hour = z
+
+        return('{} {} {} {} {}'.format(new_minute, new_hour, dom, month, dow))
 
     def get_value_from_s3(self, uri, param):
       import re
