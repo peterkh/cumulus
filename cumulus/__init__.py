@@ -35,6 +35,10 @@ def main():
         dest="stackname", required=False,
         help="The stack name, used with the watch action,"
              " ignored for other actions")
+    conf_parser.add_argument(
+        "-c", "--compact",
+        action="store_true", dest="compactbody", required=False,
+        help="Compress each template body by removing spaces.")
     args = conf_parser.parse_args()
 
     # Validate that action is something we know what to do with
@@ -80,7 +84,7 @@ def main():
 
     # Run the method of the mega stack object for the action provided
     if args.action == 'create':
-        the_mega_stack.create(args.stackname)
+        the_mega_stack.create(args.stackname, args.compactbody)
 
     if args.action == 'check':
         the_mega_stack.check(args.stackname)
