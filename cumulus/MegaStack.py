@@ -73,6 +73,8 @@ class MegaStack(object):
         # Array for holding CFStack objects once we create them
         self.stack_objs = []
 
+        self.global_dict = self.stackDict[self.name].get('vars', {})
+
         # Get the names of the sub stacks from the yaml file and sort in array
         self.cf_stacks = self.stackDict[self.name]['stacks'].keys()
 
@@ -124,7 +126,8 @@ class MegaStack(object):
                             sns_topic_arn=local_sns_arn,
                             depends_on=the_stack.get('depends'),
                             tags=merged_tags,
-                            prefix=self.prefix
+                            prefix=self.prefix,
+                            global_dict=self.global_dict
                         )
                     )
 
