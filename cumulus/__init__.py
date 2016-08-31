@@ -43,6 +43,10 @@ def main():
         "-p", "--prefix", metavar="PREFIX",
         dest="cf_prefix", required=False,
         help="The prefix of the created stacks. Default is the name of the mega stack.")
+    conf_parser.add_argument(
+        "-o", "--override-global",
+        action='append', dest="override_global", required=False,
+        help="Override a global variable. Example: --override-global \"globalVariable=newValue\"")
     args = conf_parser.parse_args()
 
     # Validate that action is something we know what to do with
@@ -74,8 +78,17 @@ def main():
         exit(1)
     logging.getLogger('boto').setLevel(boto_numeric_level)
 
+    if args.override_global:
+        try:
+            override_dict = dict(k for k in (x.split('=') for x in args.override_global))
+        except ValueError as exception:
+            print "Illegal global override parameter in: %s" % args.override_global
+            exit(1)
+    else:
+        override_dict = None
+
     # Create the mega_stack object and sort out dependencies
-    the_mega_stack = MegaStack(args.yamlfile, args.cf_prefix)
+    the_mega_stack = MegaStack(args.yamlfile, args.cf_prefix, override_dict)
     the_mega_stack.sort_stacks_by_deps()
 
     # Print some info about what we found in the yaml and dependency order

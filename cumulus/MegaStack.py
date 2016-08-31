@@ -18,7 +18,7 @@ class MegaStack(object):
     Main worker class for cumulus. Holds array of CFstack objects and does most
     of the calls to CloudFormation API
     """
-    def __init__(self, yamlFile, prefix=None):
+    def __init__(self, yamlFile, prefix=None, override_dict=None):
         self.logger = logging.getLogger(__name__)
         self.prefix = prefix
 
@@ -74,6 +74,10 @@ class MegaStack(object):
         self.stack_objs = []
 
         self.global_dict = self.stackDict[self.name].get('vars', {})
+        if override_dict:
+            for override in override_dict:
+                if override in self.global_dict:
+                    self.global_dict[override] = override_dict[override]
 
         # Get the names of the sub stacks from the yaml file and sort in array
         self.cf_stacks = self.stackDict[self.name]['stacks'].keys()
