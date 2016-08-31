@@ -47,6 +47,14 @@ def main():
         "-o", "--override-global",
         action='append', dest="override_global", required=False,
         help="Override a global variable. Example: --override-global \"globalVariable=newValue\"")
+    conf_parser.add_argument(
+        "--highlight",
+        action="store_true", dest="highlight", required=False,
+        help="Highlight output. This takes precedence over highlight-output in the yaml file.")
+    conf_parser.add_argument(
+        "--no-highlight",
+        action="store_false", dest="highlight", required=False,
+        help="Don't highlight output. This takes precedence over highlight-output in the yaml file.")
     args = conf_parser.parse_args()
 
     # Validate that action is something we know what to do with
@@ -88,7 +96,7 @@ def main():
         override_dict = None
 
     # Create the mega_stack object and sort out dependencies
-    the_mega_stack = MegaStack(args.yamlfile, args.cf_prefix, override_dict)
+    the_mega_stack = MegaStack(args.yamlfile, args.cf_prefix, override_dict, args.highlight)
     the_mega_stack.sort_stacks_by_deps()
 
     # Print some info about what we found in the yaml and dependency order

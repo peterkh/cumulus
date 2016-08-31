@@ -18,7 +18,7 @@ class MegaStack(object):
     Main worker class for cumulus. Holds array of CFstack objects and does most
     of the calls to CloudFormation API
     """
-    def __init__(self, yamlFile, prefix=None, override_dict=None):
+    def __init__(self, yamlFile, prefix=None, override_dict=None, highlight_arg=None):
         self.logger = logging.getLogger(__name__)
         self.prefix = prefix
 
@@ -38,6 +38,10 @@ class MegaStack(object):
         # Now we know we only have one top element,
         # that must be the mega stack name
         self.name = self.stackDict.keys()[0]
+
+        # Override highlight-output with argument if present.
+        if highlight_arg is not None:
+            self.stackDict[self.name]['highlight-output'] = highlight_arg
 
         # Find and set the mega stacks region. Exit if we can't find it
         if 'region' in self.stackDict[self.name]:
