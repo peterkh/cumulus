@@ -39,6 +39,10 @@ def main():
         "-c", "--compact",
         action="store_true", dest="compactbody", required=False,
         help="Compress each template body by removing spaces.")
+    conf_parser.add_argument(
+        "-p", "--prefix", metavar="PREFIX",
+        dest="cf_prefix", required=False,
+        help="The prefix of the created stacks. Default is the name of the mega stack.")
     args = conf_parser.parse_args()
 
     # Validate that action is something we know what to do with
@@ -71,7 +75,7 @@ def main():
     logging.getLogger('boto').setLevel(boto_numeric_level)
 
     # Create the mega_stack object and sort out dependencies
-    the_mega_stack = MegaStack(args.yamlfile)
+    the_mega_stack = MegaStack(args.yamlfile, args.cf_prefix)
     the_mega_stack.sort_stacks_by_deps()
 
     # Print some info about what we found in the yaml and dependency order

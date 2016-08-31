@@ -12,10 +12,14 @@ class CFStack(object):
     region, template and what other stacks it depends on.
     """
     def __init__(self, mega_stack_name, name, params, template_name, region,
-                 sns_topic_arn, tags=None, depends_on=None):
+                 sns_topic_arn, tags=None, depends_on=None, prefix=None):
         self.logger = logging.getLogger(__name__)
+        self.prefix = prefix
+
         if mega_stack_name == name:
             self.cf_stack_name = name
+        elif prefix:
+            self.cf_stack_name = "%s-%s" % (prefix, name)
         else:
             self.cf_stack_name = "%s-%s" % (mega_stack_name, name)
         self.mega_stack_name = mega_stack_name
@@ -31,6 +35,8 @@ class CFStack(object):
             for dep in depends_on:
                 if dep == mega_stack_name:
                     self.depends_on.append(dep)
+                elif prefix:
+                    self.depends_on.append("%s-%s" % (prefix, dep))
                 else:
                     self.depends_on.append("%s-%s" % (mega_stack_name, dep))
         self.region = region
@@ -126,6 +132,9 @@ class CFStack(object):
               'variable' in param_dict):
             if param_dict['source'] == self.mega_stack_name:
                 source_stack = param_dict['source']
+            elif self.prefix:
+                source_stack = ("%s-%s" %
+                                (self.prefix, param_dict['source']))
             else:
                 source_stack = ("%s-%s" %
                                 (self.mega_stack_name, param_dict['source']))

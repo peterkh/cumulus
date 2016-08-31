@@ -18,8 +18,9 @@ class MegaStack(object):
     Main worker class for cumulus. Holds array of CFstack objects and does most
     of the calls to CloudFormation API
     """
-    def __init__(self, yamlFile):
+    def __init__(self, yamlFile, prefix=None):
         self.logger = logging.getLogger(__name__)
+        self.prefix = prefix
 
         # load the yaml file and turn it into a dict
         thefile = open(yamlFile, 'r')
@@ -122,7 +123,8 @@ class MegaStack(object):
                             region=self.region,
                             sns_topic_arn=local_sns_arn,
                             depends_on=the_stack.get('depends'),
-                            tags=merged_tags
+                            tags=merged_tags,
+                            prefix=self.prefix
                         )
                     )
 
