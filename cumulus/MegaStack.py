@@ -220,9 +220,8 @@ class MegaStack(object):
                         template_body=stack.template_body,
                         parameters=stack.get_params_tuples(),
                         capabilities=[
-                          'CAPABILITY_IAM',
-                          'CAPABILITY_NAMED_IAM'
-                        ],
+                            'CAPABILITY_IAM',
+                            'CAPABILITY_NAMED_IAM'],
                         notification_arns=stack.sns_topic_arn,
                         tags=stack.tags
                     )
