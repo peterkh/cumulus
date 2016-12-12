@@ -339,7 +339,9 @@ class MegaStack(object):
                         stack_name=stack.cf_stack_name,
                         template_body=stack.template_body,
                         parameters=stack.get_params_tuples(),
-                        capabilities=['CAPABILITY_IAM'],
+                        capabilities=[
+                            'CAPABILITY_IAM',
+                            'CAPABILITY_NAMED_IAM'],
                         tags=stack.tags,
                     )
                 except boto.exception.BotoServerError as exception:
