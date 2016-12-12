@@ -3,6 +3,7 @@ CFStack module. Manages a single CloudFormation stack.
 """
 import logging
 import simplejson
+import yaml
 from boto import cloudformation
 
 
@@ -197,11 +198,11 @@ class CFStack(object):
 
     def read_template(self):
         """
-        Open and parse the json template for this stack
+        Open and parse the yaml/json template for this stack
         """
         try:
             template_file = open(self.template_name, 'r')
-            template = simplejson.load(template_file)
+            template = yaml.load(template_file)
         except Exception as exception:
             self.logger.critical("Cannot parse %s template for stack %s."
                                  " Error: %s", self.template_name, self.name,
@@ -225,8 +226,8 @@ class CFStack(object):
         if cf_stack:
             cf_temp_res = cf_stack.get_template()['GetTemplateResponse']
             cf_temp_body = cf_temp_res['GetTemplateResult']['TemplateBody']
-            cf_temp_dict = simplejson.loads(cf_temp_body)
-            if cf_temp_dict == simplejson.loads(self.template_body):
+            cf_temp_dict = yaml.load(cf_temp_body)
+            if cf_temp_dict == yaml.load(self.template_body):
                 return True
         return False
 
