@@ -35,6 +35,26 @@ def main():
         dest="stackname", required=False,
         help="The stack name, used with the watch action,"
              " ignored for other actions")
+    conf_parser.add_argument(
+        "-c", "--compact",
+        action="store_true", dest="compactbody", required=False,
+        help="Compress each template body by removing spaces.")
+    conf_parser.add_argument(
+        "-p", "--prefix", metavar="PREFIX",
+        dest="cf_prefix", required=False,
+        help="The prefix of the created stacks. Default is the name of the mega stack.")
+    conf_parser.add_argument(
+        "-o", "--override-global",
+        action='append', dest="override_global", required=False,
+        help="Override a global variable. Example: --override-global \"globalVariable=newValue\"")
+    conf_parser.add_argument(
+        "--highlight",
+        action="store_true", dest="highlight", required=False,
+        help="Highlight output. This takes precedence over highlight-output in the yaml file.")
+    conf_parser.add_argument(
+        "--no-highlight",
+        action="store_false", dest="highlight", required=False,
+        help="Don't highlight output. This takes precedence over highlight-output in the yaml file.")
     args = conf_parser.parse_args()
 
     # Validate that action is something we know what to do with
@@ -66,8 +86,17 @@ def main():
         exit(1)
     logging.getLogger('boto').setLevel(boto_numeric_level)
 
+    if args.override_global:
+        try:
+            override_dict = dict(k for k in (x.split('=') for x in args.override_global))
+        except ValueError as exception:
+            print "Illegal global override parameter in: %s" % args.override_global
+            exit(1)
+    else:
+        override_dict = None
+
     # Create the mega_stack object and sort out dependencies
-    the_mega_stack = MegaStack(args.yamlfile)
+    the_mega_stack = MegaStack(args.yamlfile, args.cf_prefix, override_dict, args.highlight)
     the_mega_stack.sort_stacks_by_deps()
 
     # Print some info about what we found in the yaml and dependency order
@@ -80,7 +109,7 @@ def main():
 
     # Run the method of the mega stack object for the action provided
     if args.action == 'create':
-        the_mega_stack.create(args.stackname)
+        the_mega_stack.create(args.stackname, args.compactbody)
 
     if args.action == 'check':
         the_mega_stack.check(args.stackname)

@@ -13,10 +13,14 @@ class CFStack(object):
     region, template and what other stacks it depends on.
     """
     def __init__(self, mega_stack_name, name, params, template_name, region,
-                 sns_topic_arn, tags=None, depends_on=None):
+                 sns_topic_arn, tags=None, depends_on=None, prefix=None, global_dict=None):
         self.logger = logging.getLogger(__name__)
+        self.prefix = prefix
+
         if mega_stack_name == name:
             self.cf_stack_name = name
+        elif prefix:
+            self.cf_stack_name = "%s-%s" % (prefix, name)
         else:
             self.cf_stack_name = "%s-%s" % (mega_stack_name, name)
         self.mega_stack_name = mega_stack_name
@@ -32,6 +36,8 @@ class CFStack(object):
             for dep in depends_on:
                 if dep == mega_stack_name:
                     self.depends_on.append(dep)
+                elif prefix:
+                    self.depends_on.append("%s-%s" % (prefix, dep))
                 else:
                     self.depends_on.append("%s-%s" % (mega_stack_name, dep))
         self.region = region
@@ -42,6 +48,11 @@ class CFStack(object):
             self.tags = {}
         else:
             self.tags = tags
+
+        if global_dict is None:
+            self.global_dict = {}
+        else:
+            self.global_dict = global_dict
 
         try:
             open(template_name, 'r')
@@ -120,6 +131,12 @@ class CFStack(object):
         # Static value set, so use it
         if 'value' in param_dict:
             return str(param_dict['value'])
+        # Handle global variable dereference
+        elif ('type' in param_dict and
+              param_dict['type'] == "global" and
+              'variable' in param_dict and
+              param_dict['variable'] in self.global_dict):
+            return str(self.global_dict[param_dict['variable']])
         # No static value set, but if we have a source,
         # type and variable can try getting from CF
         elif ('source' in param_dict and
@@ -127,6 +144,9 @@ class CFStack(object):
               'variable' in param_dict):
             if param_dict['source'] == self.mega_stack_name:
                 source_stack = param_dict['source']
+            elif self.prefix:
+                source_stack = ("%s-%s" %
+                                (self.prefix, param_dict['source']))
             else:
                 source_stack = ("%s-%s" %
                                 (self.mega_stack_name, param_dict['source']))

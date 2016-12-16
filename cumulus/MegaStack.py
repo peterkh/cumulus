@@ -18,8 +18,9 @@ class MegaStack(object):
     Main worker class for cumulus. Holds array of CFstack objects and does most
     of the calls to CloudFormation API
     """
-    def __init__(self, yamlFile):
+    def __init__(self, yamlFile, prefix=None, override_dict=None, highlight_arg=None):
         self.logger = logging.getLogger(__name__)
+        self.prefix = prefix
 
         # load the yaml file and turn it into a dict
         thefile = open(yamlFile, 'r')
@@ -37,6 +38,10 @@ class MegaStack(object):
         # Now we know we only have one top element,
         # that must be the mega stack name
         self.name = self.stackDict.keys()[0]
+
+        # Override highlight-output with argument if present.
+        if highlight_arg is not None:
+            self.stackDict[self.name]['highlight-output'] = highlight_arg
 
         # Find and set the mega stacks region. Exit if we can't find it
         if 'region' in self.stackDict[self.name]:
@@ -71,6 +76,12 @@ class MegaStack(object):
         self.global_tags = self.stackDict[self.name].get('tags', {})
         # Array for holding CFStack objects once we create them
         self.stack_objs = []
+
+        self.global_dict = self.stackDict[self.name].get('vars', {})
+        if override_dict:
+            for override in override_dict:
+                if override in self.global_dict:
+                    self.global_dict[override] = override_dict[override]
 
         # Get the names of the sub stacks from the yaml file and sort in array
         self.cf_stacks = self.stackDict[self.name]['stacks'].keys()
@@ -122,7 +133,9 @@ class MegaStack(object):
                             region=self.region,
                             sns_topic_arn=local_sns_arn,
                             depends_on=the_stack.get('depends'),
-                            tags=merged_tags
+                            tags=merged_tags,
+                            prefix=self.prefix,
+                            global_dict=self.global_dict
                         )
                     )
 
@@ -186,7 +199,7 @@ class MegaStack(object):
                                     bool(stack.exists_in_cf(
                                          self.cf_desc_stacks))))
 
-    def create(self, stack_name=None):
+    def create(self, stack_name=None, compact_body=False):
         """
         Create all stacks in the yaml file.
         Any that already exist are skipped (no attempt to update)
@@ -214,10 +227,15 @@ class MegaStack(object):
                 stack.read_template()
                 self.logger.info("Creating: %s, %s" % (
                     stack.cf_stack_name, stack.get_params_tuples()))
+                stack_body = stack.template_body
+                if compact_body:
+                    self.logger.info("Stack size: %u" % len(stack_body))
+                    stack_body = self.pack_body(stack.template_body)
+                    self.logger.info("Packed size: %u" % len(stack_body))
                 try:
                     self.cfconn.create_stack(
                         stack_name=stack.cf_stack_name,
-                        template_body=stack.template_body,
+                        template_body=stack_body,
                         parameters=stack.get_params_tuples(),
                         capabilities=[
                             'CAPABILITY_IAM',
@@ -516,6 +534,12 @@ class MegaStack(object):
             status = str(cfstack_obj.stack_status)
             time.sleep(5)
         return status
+
+    def pack_body(self, body):
+        """
+        Pack the body by removing human readability chars like spaces and newlines
+        """
+        return simplejson.dumps(simplejson.loads(body), separators=(',', ':'))
 
     def _describe_all_stacks(self):
         """

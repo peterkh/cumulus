@@ -7,6 +7,9 @@ legostack:
   # Working on N.California. You can change it just remember to also update availablilty zones below and AMI ids
   region: us-west-1
   highlight-output: true
+  # Add global variables
+  vars:
+    globalInstanceType: 't2.small'
   # Tags defined here are spread across every resource created by sub-stacks
   tags:
     globaltag: tagvalue
@@ -125,7 +128,8 @@ legostack:
         - dmz-sub
       params:
         ParamInstanceType:
-          value: 't2.small'
+          type: global
+          variable: globalInstanceType
         ParamUseElasticIP:
           value: 'true'
         ParamInstanceAMI:
@@ -198,7 +202,8 @@ legostack:
         - nat
       params:
         ParamInstanceType:
-          value: 't2.small'
+          type: global
+          variable: globalInstanceType
         ParamInstanceAMI:
           # Ubuntu 12.04 Precise HVM EBS
           value: 'ami-0dad4949'
