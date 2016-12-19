@@ -3,6 +3,7 @@ CFStack module. Manages a single CloudFormation stack.
 """
 import logging
 import simplejson
+import yaml
 
 
 class CFStack(object):
@@ -120,9 +121,9 @@ class CFStack(object):
             return str(param_dict['value'])
         # No static value set, but if we have a source,
         # type and variable can try getting from CF
-        elif ('source' in param_dict
-              and 'type' in param_dict
-              and 'variable' in param_dict):
+        elif ('source' in param_dict and
+              'type' in param_dict and
+              'variable' in param_dict):
             if param_dict['source'] == self.mega_stack_name:
                 source_stack = param_dict['source']
             else:
@@ -133,8 +134,8 @@ class CFStack(object):
                 var_type=param_dict['type'],
                 var_name=param_dict['variable'])
         else:
-            error_message = ("Error in yaml file, can't parse parameter %s"
-                             + " for %s stack.")
+            error_message = ("Error in yaml file, can't parse parameter %s" +
+                             " for %s stack.")
             self.logger.critical(error_message, param_name, self.name)
             exit(1)
 
@@ -194,11 +195,11 @@ class CFStack(object):
 
     def read_template(self):
         """
-        Open and parse the json template for this stack
+        Open and parse the yaml/json template for this stack
         """
         try:
             template_file = open(self.template_name, 'r')
-            template = simplejson.load(template_file)
+            template = yaml.load(template_file)
         except Exception as exception:
             self.logger.critical("Cannot parse %s template for stack %s."
                                  " Error: %s", self.template_name, self.name,
@@ -222,8 +223,8 @@ class CFStack(object):
         if cf_stack:
             cf_temp_res = cf_stack.get_template()['GetTemplateResponse']
             cf_temp_body = cf_temp_res['GetTemplateResult']['TemplateBody']
-            cf_temp_dict = simplejson.loads(cf_temp_body)
-            if cf_temp_dict == simplejson.loads(self.template_body):
+            cf_temp_dict = yaml.load(cf_temp_body)
+            if cf_temp_dict == yaml.load(self.template_body):
                 return True
         return False
 
@@ -248,8 +249,8 @@ class CFStack(object):
             key = param.key
             value = param.value
             if key not in self.params:
-                msg = ("New params are missing key %s that exists in CF for %s"
-                       + " stack already.")
+                msg = ("New params are missing key %s that exists in CF " +
+                       "for %s stack already.")
                 self.logger.debug(msg, key, self.name)
                 return False
             # if the value of parameters are different, needs updating
