@@ -125,7 +125,8 @@ class CFStack(object):
             if var_name in os.environ:
                 return os.environ[var_name]
             else:
-                raise KeyError("Cannot resolve environment variable " + var_name)
+                raise KeyError("Cannot resolve environment variable " +
+                               var_name)
         # No static value set, but if we have a source,
         # type and variable can try getting from CF
         elif ('source' in param_dict and
