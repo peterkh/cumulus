@@ -4,6 +4,7 @@ CFStack module. Manages a single CloudFormation stack.
 import logging
 import simplejson
 import yaml
+import os
 
 
 class CFStack(object):
@@ -119,6 +120,12 @@ class CFStack(object):
         # Static value set, so use it
         if 'value' in param_dict:
             return str(param_dict['value'])
+        elif 'value_env' in param_dict:
+            var_name = str(param_dict['value_env']).strip().upper()
+            if var_name in os.environ:
+                return os.environ[var_name]
+            else:
+                raise KeyError("Cannot resolve environment variable " + var_name)
         # No static value set, but if we have a source,
         # type and variable can try getting from CF
         elif ('source' in param_dict and
