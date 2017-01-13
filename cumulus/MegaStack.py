@@ -10,7 +10,7 @@ import yaml
 import pystache
 import os
 from cumulus.CFStack import CFStack
-from boto import cloudformation, iam
+from boto import cloudformation, iam, utils
 
 
 class MegaStack(object):
@@ -48,10 +48,17 @@ class MegaStack(object):
 
         if 'account_id' in self.stackDict[self.name]:
             # Get the account ID for the current AWS credentials
-            iamconn = iam.connect_to_region(self.region)
-            user_response = iamconn.get_user()['get_user_response']
-            user_result = user_response['get_user_result']
-            account_id = user_result['user']['arn'].split(':')[4]
+
+            metadata = boto.utils.get_instance_metadata(timeout=1, num_retries=1)
+            if 'iam' in metadata:
+                # We're running in an ec2 instance, get the account id from the
+                # instance profile ARN
+                account_id = metadata['iam']['info']['InstanceProfileArn'].split(':')[4]
+            else:
+                iamconn = iam.connect_to_region(self.region)
+                user_response = iamconn.get_user()['get_user_response']
+                user_result = user_response['get_user_result']
+                account_id = user_result['user']['arn'].split(':')[4]
 
             # Check if the current account ID matches the stack's account ID
             if account_id != str(self.stackDict[self.name]['account_id']):
