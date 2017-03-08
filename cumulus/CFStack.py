@@ -6,6 +6,7 @@ import simplejson
 import yaml
 import os
 from boto import cloudformation
+import boto3
 
 
 class CFStack(object):
@@ -36,6 +37,7 @@ class CFStack(object):
                 else:
                     self.depends_on.append("%s-%s" % (mega_stack_name, dep))
         self.region = region
+        self.ec2 = boto3.client('ec2', region_name=region)
         self.sns_topic_arn = sns_topic_arn
 
         # Safer than setting default value for tags = {}
@@ -142,6 +144,15 @@ class CFStack(object):
                 source_stack=source_stack,
                 var_type=param_dict['type'],
                 var_name=param_dict['variable'])
+        elif ('aws' in param_dict
+              and 'command' in param_dict
+              and 'index' in param_dict
+              and 'variable' in param_dict):
+            if param_dict['aws'] == 'ec2':
+                return self.get_value_from_ec2(
+                    command=param_dict['command'],
+                    index=param_dict['index'],
+                    var_name=param_dict['variable'])
         else:
             error_message = ("Error in yaml file, can't parse parameter %s" +
                              " for %s stack.")
@@ -192,6 +203,37 @@ class CFStack(object):
                              " get_value_from_cf, needs to be parameter, " +
                              "resource or output. Not: %s")
             self.logger.critical(error_message, (var_type))
+            exit(1)
+
+    def get_ec2_availability_zones(self):
+        """
+        Get results from AWS ec2
+        """
+        results = self.ec2.describe_availability_zones(Filters=[
+            {'Name': 'region-name', 'Values': [self.region]},
+            {'Name': 'state', 'Values': ['available']}])
+        return results
+
+    def get_value_from_ec2(self, command, index, var_name):
+        """
+        Get a variable from AWS ec2
+        """
+        if command == 'describe-availability-zones':
+            results = self.get_ec2_availability_zones()
+            for result in results.itervalues():
+                if index >= len(result):
+                    error_message = ("Error: Index out of available bounds")
+                    self.logger.critical(error_message, (index))
+                    exit(1)
+                for key, value in result[index].iteritems():
+                    if str(key) == var_name:
+                        return str(value)
+        else:
+            error_message = ("Error: invalid command passed to " +
+                             "get_value_from_ec2, " +
+                             "needs to be describe-availability-zones. " +
+                             "Not: %s")
+            self.logger.critical(error_message, (command))
             exit(1)
 
     def get_params_tuples(self):
