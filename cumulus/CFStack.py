@@ -301,7 +301,7 @@ class CFStack(object):
         self.template_body = simplejson.dumps(
             template,
             sort_keys=True,
-            indent=2,
+            indent=0,
             separators=(',', ': '),
         )
         return True
