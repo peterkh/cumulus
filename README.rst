@@ -110,7 +110,7 @@ Clone the repo somewhere:
 
 ::
 
-        $ git clone git://github.com/cotdsa/cumulus.git
+        $ git clone git://github.com/peterkh/cumulus.git
 
 Install Cumulus with setuptools:
 
@@ -126,7 +126,7 @@ Cumulus to interact with AWS). Set the following environment variables:
 **AWS\_SECRET\_ACCESS\_KEY** - Your AWS Secret Access Key
 
 or create a boto config file as described
-`here <http://code.google.com/p/boto/wiki/BotoConfig>`__, covering some
+`here <http://docs.pythonboto.org/en/latest/boto_config_tut.html>`__, covering some
 other helpful boto-related settings.
 
 Creating the example stack
@@ -184,7 +184,7 @@ General usage
                                 The yaml file to read the VPC mega stack configuration
                                 from
           -a ACTION, --action ACTION
-                                The action to preform: create, check, update, delete
+                                The action to perform: create, check, update, delete
                                 or watch
           -l LOGLEVEL, --log LOGLEVEL
                                 Log Level for output messages, CRITICAL, ERROR,
